@@ -2,12 +2,15 @@ package com.inventory.controller;
 
 import com.inventory.Main;
 import com.inventory.exception.ReceiptException;
+import com.inventory.exception.UnauthorizedActionException;
 import com.inventory.model.CartItem;
 import com.inventory.model.Transaction;
 import com.inventory.repository.ReceiptFileRepository;
 import com.inventory.repository.TransactionFileRepository;
+import com.inventory.service.ReceiptService;
 import com.inventory.service.TransactionService;
 import com.inventory.util.ReceiptDialog;
+import com.inventory.util.Session;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
