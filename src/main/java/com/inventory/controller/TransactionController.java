@@ -27,22 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controller for transactions.fxml - the Transaction History screen.
- *
- * OOP concept: LAYERED ARCHITECTURE.
- * Just like every other controller in this project, TransactionController
- * only knows about JavaFX controls and *what* the user wants to do (view
- * the list, view one transaction's details, view its saved receipt). It
- * never opens data/transactions.txt or a receipt file itself - it calls
- * TransactionService and ReceiptService and lets them (and the
- * repositories underneath them) deal with the actual files.
- *
- * Permissions: an ADMIN sees every transaction ever made. A CASHIER only
- * sees the transactions where they were the cashier - this filtering
- * happens inside TransactionService, not here, so the rule lives in one
- * place.
- */
+// UI controller for transactions.fxml: history, details, receipt, delete
 public class TransactionController {
 
     @FXML
@@ -75,8 +60,6 @@ public class TransactionController {
     private static final DateTimeFormatter DATE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    // The controller only talks to services - never straight to a
-    // Repository or straight to a file.
     private final TransactionFileRepository transactionFileRepository = new TransactionFileRepository();
     private final TransactionService transactionService = new TransactionService(transactionFileRepository);
 
@@ -86,6 +69,7 @@ public class TransactionController {
     private Transaction selectedTransaction;
 
     @FXML
+    // runs on screen load: set up table + role-based button access
     private void initialize() {
         setupTableColumns();
         setupSelectionListener();
@@ -95,6 +79,7 @@ public class TransactionController {
         updateActionButtonsState();
     }
 
+    // wire table columns to Transaction fields
     private void setupTableColumns() {
         idColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTransactionId()));
         dateColumn.setCellValueFactory(data ->
@@ -105,6 +90,7 @@ public class TransactionController {
         paymentMethodColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getPaymentMethod()));
     }
 
+    // keep action buttons in sync with the selected row
     private void setupSelectionListener() {
         transactionTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             selectedTransaction = newVal;
@@ -112,42 +98,29 @@ public class TransactionController {
         });
     }
 
+    // enable/disable buttons based on selection + admin role
     private void updateActionButtonsState() {
         boolean hasSelection = selectedTransaction != null;
         viewDetailsButton.setDisable(!hasSelection);
         viewReceiptButton.setDisable(!hasSelection);
-        // Deleting one transaction needs BOTH a selected row AND ADMIN
-        // access. "Clear All History" only needs ADMIN access (handled
-        // once, in initialize(), since it never depends on the
-        // selection).
+
         deleteTransactionButton.setDisable(!hasSelection || !Session.isAdmin());
     }
 
-    /**
-     * Reloads the transaction list from data/transactions.txt (through
-     * TransactionService), respecting the ADMIN/CASHIER visibility rule.
-     * If the file is missing or unreadable, TransactionFileRepository
-     * already handles that quietly and simply returns an empty list, so
-     * this screen never crashes - it just shows "No transactions found."
-     */
     @FXML
     private void handleRefresh() {
         refreshTransactions();
     }
 
+    // reload the table (admins see all, cashiers see their own)
     private void refreshTransactions() {
         List<Transaction> transactions = transactionService.getVisibleTransactions();
         transactionTable.setItems(FXCollections.observableArrayList(transactions));
         statusLabel.setText(transactions.isEmpty() ? "No transactions found." : "");
     }
 
-    /**
-     * Shows a summary of the selected transaction: every purchased item,
-     * quantity, and the money breakdown - similar to the confirmation
-     * shown right after checkout, but reloaded from saved data instead of
-     * a live sale.
-     */
     @FXML
+    // view details button: build and show a line-item breakdown
     private void handleViewDetails() {
         if (selectedTransaction == null) {
             showError("Please select a transaction first.");
@@ -158,7 +131,7 @@ public class TransactionController {
         message.append(String.format("Date: %s%n", selectedTransaction.getDateTime().format(DATE_TIME_FORMAT)));
         message.append(String.format("Cashier: %s%n%n", selectedTransaction.getCashier()));
 
-        for (CartItem item : selectedTransaction.getItems()) {
+        for (CartItem item : selectedTransaction.getItems()) { // one line per item
             message.append(String.format("%-20s x%-4d $%.2f%n",
                     item.getProduct().getName(), item.getQuantity(), item.getSubtotal()));
         }
@@ -170,7 +143,7 @@ public class TransactionController {
         message.append(String.format("Total: $%.2f%n%n", selectedTransaction.getTotal()));
 
         message.append(String.format("Payment Method: %s%n", selectedTransaction.getPaymentMethod()));
-        if ("Cash".equals(selectedTransaction.getPaymentMethod())) {
+        if ("Cash".equals(selectedTransaction.getPaymentMethod())) { // show paid/change only for cash
             message.append(String.format("Amount Paid: $%.2f%n", selectedTransaction.getAmountPaid()));
             message.append(String.format("Change: $%.2f", selectedTransaction.getChange()));
         }
@@ -181,15 +154,8 @@ public class TransactionController {
         alert.showAndWait();
     }
 
-    /**
-     * Opens the saved receipt for the selected transaction. Handles every
-     * error case gracefully instead of crashing:
-     *   - the transaction has no receiptId at all (saved before receipts
-     *     existed, i.e. old Part 6A data)
-     *   - the receiptId is recorded but the .txt file is missing or
-     *     unreadable (ReceiptException from ReceiptService)
-     */
     @FXML
+    // view receipt button: load and display the saved receipt text
     private void handleViewReceipt() {
         if (selectedTransaction == null) {
             showError("Please select a transaction first.");
@@ -209,15 +175,8 @@ public class TransactionController {
         }
     }
 
-    /**
-     * Permanently deletes the selected transaction (ADMIN-only, enforced
-     * again by TransactionService even though the button is already
-     * disabled for a CASHIER). Asks for confirmation first, since this
-     * cannot be undone. If the transaction has a saved receipt, that
-     * receipt file is deleted too, so no orphaned file is left behind in
-     * data/receipts/.
-     */
     @FXML
+    // delete button: confirm, remove transaction + its receipt
     private void handleDeleteTransaction() {
         if (selectedTransaction == null) {
             showError("Please select a transaction first.");
@@ -249,15 +208,8 @@ public class TransactionController {
         }
     }
 
-    /**
-     * Permanently deletes EVERY saved transaction (ADMIN-only). This is
-     * the Dashboard/Reports numbers' only source of transaction data, so
-     * clearing history here also resets the Dashboard's "Transactions"/
-     * "Total Revenue" cards and every number on the Reports screen the
-     * next time either is opened - there is no separate report data to
-     * clean up. Asks for confirmation first, since this cannot be undone.
-     */
     @FXML
+    // clear-all button: admin-only, wipes every transaction
     private void handleClearHistory() {
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION,
                 "Delete ALL transaction history? This cannot be undone.", ButtonType.YES, ButtonType.NO);
@@ -281,6 +233,7 @@ public class TransactionController {
     }
 
     @FXML
+    // nav: back to dashboard
     private void handleBack() {
         try {
             Main.switchScene("view/dashboard.fxml");

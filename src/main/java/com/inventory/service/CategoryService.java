@@ -12,18 +12,7 @@ import com.inventory.repository.ProductFileRepository;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * CategoryService contains the BUSINESS RULES for managing categories:
- * validation, uniqueness checks, and keeping products in sync when a
- * category is renamed or deleted.
- *
- * OOP concept: LAYERED ARCHITECTURE.
- * Controllers never talk to CategoryFileRepository or ProductFileRepository
- * directly - they only call this service. This service is allowed to use
- * BOTH repositories because renaming/deleting a category also affects any
- * product that uses it; keeping that coordination in one place (instead of
- * copy-pasted inside a controller) is exactly what a service layer is for.
- */
+// business logic + validation for categories
 public class CategoryService {
 
     private final CategoryFileRepository categoryFileRepository;
@@ -35,17 +24,10 @@ public class CategoryService {
         this.productFileRepository = productFileRepository;
     }
 
-    /**
-     * Returns every category currently saved.
-     */
     public List<Category> getAllCategories() {
         return categoryFileRepository.loadAll();
     }
 
-    /**
-     * Returns every category's name as plain text, for filling
-     * ComboBoxes in the UI.
-     */
     public List<String> getAllCategoryNames() {
         List<String> names = new ArrayList<>();
         for (Category category : getAllCategories()) {
@@ -54,12 +36,7 @@ public class CategoryService {
         return names;
     }
 
-    /**
-     * Validates and adds a new category.
-     *
-     * @throws InvalidCategoryException   if the name is blank
-     * @throws DuplicateCategoryException if a category with that name (ignoring case) already exists
-     */
+    // validate, reject duplicates, then persist
     public Category addCategory(String name) {
         String trimmedName = validateName(name);
 
@@ -72,15 +49,7 @@ public class CategoryService {
         return category;
     }
 
-    /**
-     * Renames an existing category and updates every product currently
-     * using it, so no product is left pointing at a category name that no
-     * longer exists.
-     *
-     * @throws InvalidCategoryException   if the new name is blank
-     * @throws CategoryNotFoundException  if the current category does not exist
-     * @throws DuplicateCategoryException if another category already uses the new name
-     */
+    // rename + cascade the new name onto every product using it
     public void renameCategory(String currentName, String newName) {
         String trimmedNewName = validateName(newName);
 
@@ -100,12 +69,7 @@ public class CategoryService {
         }
     }
 
-    /**
-     * Deletes a category, as long as no product currently uses it.
-     *
-     * @throws CategoryNotFoundException if the category does not exist
-     * @throws CategoryInUseException    if one or more products still use this category
-     */
+    // guard: block deleting a category still in use
     public void deleteCategory(String name) {
         categoryFileRepository.findByName(name)
                 .orElseThrow(() -> new CategoryNotFoundException("No category found named: " + name));
@@ -120,11 +84,7 @@ public class CategoryService {
         categoryFileRepository.delete(name);
     }
 
-    /**
-     * Counts how many products currently use the given category, so the
-     * "Manage Categories" screen can show it (and decide whether Delete
-     * is safe) before the admin even tries.
-     */
+    // how many products currently use this category
     public int countProductsUsingCategory(String name) {
         int count = 0;
         for (Product product : productFileRepository.loadAll()) {
@@ -135,10 +95,7 @@ public class CategoryService {
         return count;
     }
 
-    /**
-     * Updates every product using the old category name so it points at
-     * the renamed Category instead.
-     */
+    // update every matching product's category, then save once
     private void renameCategoryOnProducts(String oldName, Category renamed) {
         List<Product> products = productFileRepository.loadAll();
         boolean changedAny = false;

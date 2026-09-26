@@ -8,33 +8,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Transaction is a record of ONE completed sale: which items were bought,
- * the calculated subtotal/discount/tax/total, and how the customer paid.
- *
- * OOP concept: COMPOSITION.
- * A Transaction "has a" List of CartItems - it is built FROM other
- * objects rather than inheriting from them, the same way Cart is
- * composed of CartItems.
- *
- * Part 6A note: a Transaction is now PERSISTED. Instead of holding on to
- * a live Payment object (CashPayment/CardPayment/QRPayment), it stores
- * the plain facts a receipt needs - paymentMethod, amountPaid, change -
- * as simple fields. This matters because when a Transaction is LOADED
- * back from data/transactions.txt after the app restarts, there is no
- * real payment "processing" happening anymore - we only need to
- * remember what already happened. Simple fields are easy to save to a
- * text file and load back, exactly like Product does with
- * toFileLine()/fromFileLine().
- *
- * Part 6B note: a Transaction now also remembers the ID of the Receipt
- * that was generated for it (e.g. "R0001"), so the Transaction History
- * screen can look up and re-open the exact saved receipt file for any
- * past sale. Older transactions saved before Part 6B do not have this
- * value in the file - fromFileLines() below treats a missing receiptId
- * as "" (no receipt available) instead of failing to load the whole
- * transaction.
- */
+// receipt record: one transaction + its line items
 public class Transaction {
 
     private final String transactionId;
@@ -50,11 +24,6 @@ public class Transaction {
     private final double change;
     private final String receiptId;
 
-    /**
-     * Full constructor - mainly used by TransactionFileRepository when
-     * rebuilding a Transaction object from a saved file, since a saved
-     * transaction already has a fixed ID and date/time.
-     */
     public Transaction(String transactionId, LocalDateTime dateTime, String cashier,
                         List<CartItem> items, double subtotal, double discountAmount,
                         double taxAmount, double total, String paymentMethod,
@@ -73,17 +42,7 @@ public class Transaction {
         this.receiptId = (receiptId == null) ? "" : receiptId;
     }
 
-    /**
-     * Convenience constructor used by CheckoutService right after a sale
-     * completes: the date/time is "now", and the payment details
-     * (method / amount paid / change) are pulled out of whichever
-     * Payment subclass was used.
-     *
-     * OOP concept: POLYMORPHISM. This constructor works the same way no
-     * matter which kind of Payment it is given - it only ever calls
-     * methods declared on the abstract Payment class, plus one
-     * "instanceof" check to read CashPayment's extra amountPaid detail.
-     */
+    // convenience constructor built from a Payment (polymorphism)
     public Transaction(String transactionId, String cashier, List<CartItem> items,
                         double subtotal, double discountAmount, double taxAmount,
                         double total, Payment payment, String receiptId) {
@@ -92,8 +51,6 @@ public class Transaction {
                 (payment instanceof CashPayment cashPayment) ? cashPayment.getAmountPaid() : total,
                 payment.getChange(), receiptId);
     }
-
-    // ----- Getters -----
 
     public String getTransactionId() {
         return transactionId;
@@ -139,40 +96,15 @@ public class Transaction {
         return change;
     }
 
-    /**
-     * The ID of the Receipt generated for this transaction (e.g.
-     * "R0001"), or "" if this transaction was saved before receipts
-     * existed (Part 6A data) and therefore has no receipt on file.
-     */
     public String getReceiptId() {
         return receiptId;
     }
 
-    /**
-     * True if this transaction has a receipt ID recorded AND that
-     * receipt file still exists on disk is NOT checked here - this only
-     * checks whether an ID was ever recorded. ReceiptService/
-     * ReceiptFileRepository are responsible for checking the file itself.
-     */
     public boolean hasReceipt() {
         return receiptId != null && !receiptId.isBlank();
     }
 
-    // ----- File I/O helpers -----
-
-    /**
-     * Converts this Transaction into several lines of text, ready to be
-     * appended to data/transactions.txt. A transaction is stored as a
-     * small "block" of lines: one TRANSACTION line with the sale's
-     * summary numbers, one ITEM line per purchased product, and a
-     * closing END line so the reader knows where the block stops.
-     *
-     * Example:
-     *   TRANSACTION,T0001,2025-01-10T09:15:30,ADMIN,9.90,0.00,0.90,10.80,Cash,20.00,9.20,R0001
-     *   ITEM,P001,Coca Cola,Drink,1.50,2
-     *   ITEM,P003,Bread,Food,2.00,1
-     *   END
-     */
+    // serialize: TRANSACTION header line + one ITEM line per product + END
     public List<String> toFileLines() {
         List<String> lines = new ArrayList<>();
 
@@ -205,21 +137,7 @@ public class Transaction {
         return lines;
     }
 
-    /**
-     * Rebuilds a Transaction object from one block of lines previously
-     * produced by toFileLines() (a TRANSACTION line, zero or more ITEM
-     * lines, then an END line).
-     *
-     * OOP concept: this mirrors Product.fromFileLine() - the class that
-     * knows how to WRITE its own file format is also the class that
-     * knows how to READ it back.
-     *
-     * @throws IllegalArgumentException if the block is missing required
-     *                                   lines or any value cannot be parsed.
-     *                                   TransactionFileRepository catches
-     *                                   this so one bad block does not
-     *                                   stop the rest of the file loading.
-     */
+    // deserialize: rebuild a Transaction from its stored block of lines
     public static Transaction fromFileLines(List<String> blockLines) {
         if (blockLines == null || blockLines.isEmpty()) {
             throw new IllegalArgumentException("Empty transaction block.");
@@ -231,10 +149,7 @@ public class Transaction {
         }
 
         String[] parts = header.split(",", -1);
-        // 11 fields = a transaction saved before Part 6B (no receiptId
-        // yet). 12 fields = a transaction saved by Part 6B or later
-        // (receiptId is the last field). Both are accepted so old data
-        // keeps working after this upgrade.
+
         if (parts.length != 11 && parts.length != 12) {
             throw new IllegalArgumentException("Malformed TRANSACTION line: " + header);
         }
@@ -283,12 +198,7 @@ public class Transaction {
                 discountAmount, taxAmount, total, paymentMethod, amountPaid, change, receiptId);
     }
 
-    /**
-     * Parses one ITEM line back into a CartItem. Since a Transaction only
-     * needs to REMEMBER what was bought (not manage live stock), a small
-     * snapshot Product is rebuilt from the saved id/name/category/price -
-     * minimumStock is not needed here, so it defaults to 0.
-     */
+    // parse a single ITEM line back into a CartItem
     private static CartItem parseItemLine(String line, String transactionId) {
         String[] parts = line.split(",", -1);
         if (parts.length != 6) {

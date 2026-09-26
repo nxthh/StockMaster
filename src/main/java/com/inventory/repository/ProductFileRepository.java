@@ -13,42 +13,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * ProductFileRepository is responsible for ALL reading and writing of
- * product data to and from the text file data/products.txt.
- *
- * OOP concept: SEPARATION OF RESPONSIBILITIES.
- * File I/O (opening files, reading lines, writing lines) is messy and can
- * fail in many ways (missing file, bad permissions, etc.). By keeping all
- * of that logic in one class, the rest of the application (services,
- * controllers) never needs to know HOW the data is stored. If we later
- * switched to storing products in a database instead of a text file, only
- * this class would need to change.
- *
- * OOP concept: COLLECTIONS.
- * Products are kept and returned as an ArrayList<Product>, Java's
- * resizable array collection.
- */
+// file I/O layer: reads/writes products.txt (one repo per entity)
 public class ProductFileRepository {
 
     private static final String FILE_PATH = "data/products.txt";
 
-    /**
-     * Creates the repository and makes sure data/products.txt exists.
-     * If the file (or the data folder) is missing, it is created and
-     * filled with sample starter products so the application always has
-     * something to show.
-     */
     public ProductFileRepository() {
         createFileWithSampleDataIfMissing();
     }
 
-    /**
-     * Reads every line from data/products.txt and converts each line into
-     * a Product object.
-     *
-     * @return an ArrayList containing every product currently saved
-     */
+    // read every product line into memory
     public List<Product> loadAll() {
         List<Product> products = new ArrayList<>();
 
@@ -57,16 +31,12 @@ public class ProductFileRepository {
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
                 if (line.isEmpty()) {
-                    continue; // skip blank lines
+                    continue;
                 }
                 try {
                     products.add(Product.fromFileLine(line));
                 } catch (RuntimeException e) {
-                    // A single damaged line (missing field, bad number,
-                    // etc.) should not take down the whole product list -
-                    // skip it with a warning and keep loading the rest.
-                    // Same approach TransactionFileRepository already
-                    // uses for a corrupted transaction block.
+                    // skip one bad line instead of failing the whole load
                     System.out.println("Skipping invalid product record: " + line + " (" + e.getMessage() + ")");
                 }
             }
@@ -77,11 +47,7 @@ public class ProductFileRepository {
         return products;
     }
 
-    /**
-     * Writes the given list of products to data/products.txt, replacing
-     * whatever was there before. Every add/update/delete operation ends by
-     * calling this method so changes are saved immediately.
-     */
+    // overwrite the file with the full current list
     public void saveAll(List<Product> products) {
         try (FileWriter writer = new FileWriter(FILE_PATH)) {
             for (Product product : products) {
@@ -93,19 +59,13 @@ public class ProductFileRepository {
         }
     }
 
-    /**
-     * Adds a new product and immediately saves the updated list to disk.
-     */
     public void add(Product product) {
         List<Product> products = loadAll();
         products.add(product);
         saveAll(products);
     }
 
-    /**
-     * Replaces an existing product (matched by ID) with updated data and
-     * saves the change to disk.
-     */
+    // find by id, replace, then rewrite the whole file
     public void update(Product updatedProduct) {
         List<Product> products = loadAll();
         for (int i = 0; i < products.size(); i++) {
@@ -117,22 +77,12 @@ public class ProductFileRepository {
         saveAll(products);
     }
 
-    /**
-     * Removes the product with the given ID and saves the change to disk.
-     */
     public void delete(String productId) {
         List<Product> products = loadAll();
         products.removeIf(product -> product.getId().equalsIgnoreCase(productId));
         saveAll(products);
     }
 
-    /**
-     * Searches the saved products for one matching the given ID.
-     *
-     * OOP concept: Optional is used instead of returning null. It clearly
-     * tells the caller "this product might not exist" and forces them to
-     * handle that case instead of accidentally causing a NullPointerException.
-     */
     public Optional<Product> findById(String productId) {
         for (Product product : loadAll()) {
             if (product.getId().equalsIgnoreCase(productId)) {
@@ -142,20 +92,15 @@ public class ProductFileRepository {
         return Optional.empty();
     }
 
-    /**
-     * Creates the data folder and products.txt file with sample starter
-     * products if they do not already exist. This runs once, the first
-     * time the application starts.
-     */
+    // first run: seed the data file with sample products
     private void createFileWithSampleDataIfMissing() {
         try {
             Path filePath = Path.of(FILE_PATH);
 
             if (Files.exists(filePath)) {
-                return; // file already exists, nothing to do
+                return;
             }
 
-            // Make sure the "data" folder exists before creating the file inside it.
             if (filePath.getParent() != null) {
                 Files.createDirectories(filePath.getParent());
             }

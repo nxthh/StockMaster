@@ -47,27 +47,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controller for pos.fxml - the Point of Sale (POS) screen where a cashier
- * builds up a cart of products before checkout (checkout itself is a later
- * phase).
- *
- * OOP concept: LAYERED ARCHITECTURE.
- * Just like InventoryController, this class only knows about JavaFX
- * controls and *what* the cashier wants to do (search, select a product,
- * add/update/remove a cart line, clear the cart). It does not know how
- * products are stored (that is ProductService/ProductFileRepository) and
- * it does not know how cart totals are calculated or how stock limits are
- * enforced (that is Cart's job). This keeps the controller small and easy
- * to read.
- *
- * Architecture for this screen:
- *   POSController -> Cart -> CartItem -> Product
- *   POSController -> ProductService -> ProductFileRepository -> file
- */
+// UI controller for pos.fxml: browse products, build cart, checkout
 public class POSController {
 
-    // ----- Product search/select section -----
     @FXML
     private TextField searchField;
     @FXML
@@ -92,7 +74,6 @@ public class POSController {
     @FXML
     private Button addToCartButton;
 
-    // ----- Cart section -----
     @FXML
     private TableView<CartItem> cartTable;
     @FXML
@@ -118,7 +99,6 @@ public class POSController {
     @FXML
     private Label statusMessageLabel;
 
-    // ----- Checkout section -----
     @FXML
     private TextField discountField;
     @FXML
@@ -136,49 +116,32 @@ public class POSController {
     @FXML
     private Button checkoutButton;
 
-    // The Controller talks only to services for product/stock/checkout
-    // work - never straight to a Repository or straight to a file.
     private final ProductFileRepository productFileRepository = new ProductFileRepository();
     private final CategoryFileRepository categoryFileRepository = new CategoryFileRepository();
     private final ProductService productService = new ProductService(productFileRepository);
     private final InventoryService inventoryService = new InventoryService(productFileRepository);
     private final CategoryService categoryService = new CategoryService(categoryFileRepository, productFileRepository);
 
-    // Part 6A: handles all reading/writing of data/transactions.txt, so
-    // this controller never has to touch File I/O directly.
     private final TransactionFileRepository transactionFileRepository = new TransactionFileRepository();
 
-    // Part 6B: handles all reading/writing of receipt files under
-    // data/receipts/, and building the receipt's text layout - again,
-    // this controller never touches a file or formats a receipt itself.
     private final ReceiptFileRepository receiptFileRepository = new ReceiptFileRepository();
     private final ReceiptService receiptService = new ReceiptService(receiptFileRepository);
 
-    // The store's tax rate lives in exactly ONE place. To change the tax
-    // rate for the whole application, change this one number.
-    private final TaxCalculator taxCalculator = new TaxCalculator(0.10); // 10%
+    private final TaxCalculator taxCalculator = new TaxCalculator(0.10);
 
     private final CheckoutService checkoutService = new CheckoutService(
             productService, inventoryService, taxCalculator, transactionFileRepository, receiptService);
 
-    // The cart for the CURRENT sale. A new POSController (and therefore a
-    // new, empty Cart) is created each time the POS screen is opened.
     private final Cart cart = new Cart();
 
-    // The full, unfiltered list of products loaded from the service. The
-    // product table only ever shows a filtered copy of this list (see applySearch).
     private List<Product> allProducts = new ArrayList<>();
 
-    // The product currently selected in the product table (null if none).
     private Product selectedProduct;
 
-    // The cart line currently selected in the cart table (null if none).
     private CartItem selectedCartItem;
 
-    /**
-     * Called automatically by JavaFX right after pos.fxml is loaded.
-     */
     @FXML
+    // runs on screen load: wire every table, listener, and combo box
     private void initialize() {
         setupProductTableColumns();
         setupCartTableColumns();
@@ -189,12 +152,11 @@ public class POSController {
         setupPaymentMethodComboBox();
         setupCheckoutListeners();
         refreshProducts();
-        refreshCartView(); // also triggers the first recalculateTotals()
+        refreshCartView();
         updateActionButtonsState();
     }
 
-    // ===================== Setup helpers =====================
-
+    // wire product table columns
     private void setupProductTableColumns() {
         idColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getId()));
         nameColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
@@ -206,6 +168,7 @@ public class POSController {
                 new SimpleIntegerProperty(data.getValue().getQuantity()).asObject());
     }
 
+    // wire cart table columns
     private void setupCartTableColumns() {
         cartProductColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getProduct().getName()));
@@ -217,6 +180,7 @@ public class POSController {
                 new SimpleStringProperty(String.format("%.2f", data.getValue().getSubtotal())));
     }
 
+    // update label + default quantity when a product row is picked
     private void setupProductSelectionListener() {
         productTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             selectedProduct = newVal;
@@ -232,6 +196,7 @@ public class POSController {
         });
     }
 
+    // fill the update-quantity field when a cart row is picked
     private void setupCartSelectionListener() {
         cartTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             selectedCartItem = newVal;
@@ -240,30 +205,18 @@ public class POSController {
         });
     }
 
+    // re-filter products as the search box is typed in
     private void setupSearchListener() {
         searchField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
     }
 
-    /**
-     * Fills the Category ComboBox with "All" plus every category that
-     * currently exists, loaded live from CategoryService (not a
-     * hard-coded list) so a category an Admin creates on the Inventory
-     * screen is immediately available here too. Picking a category
-     * re-filters the product table together with whatever is currently
-     * typed in the search box.
-     */
+    // wire the category filter dropdown
     private void setupCategoryFilterComboBox() {
         populateCategoryFilterItems();
         categoryFilterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
     }
 
-    /**
-     * Reloads just the ComboBox's items from CategoryService, keeping the
-     * current selection if it still exists (falling back to "All"
-     * otherwise). Separate from setupCategoryFilterComboBox() so it can be
-     * called again later (e.g. handleRefreshProducts()) without attaching
-     * a second, duplicate listener each time.
-     */
+    // reload category filter options from CategoryService
     private void populateCategoryFilterItems() {
         String previousValue = categoryFilterComboBox.getValue();
         List<String> items = new ArrayList<>();
@@ -273,12 +226,7 @@ public class POSController {
         categoryFilterComboBox.setValue(items.contains(previousValue) ? previousValue : "All");
     }
 
-    /**
-     * Fills the Payment ComboBox with the three supported methods and
-     * reacts when the cashier changes their selection: the Amount Paid
-     * field only makes sense for Cash, so it is disabled (and cleared)
-     * for Card/QR.
-     */
+    // Cash/Card/QR selector; only Cash needs an amount-paid field
     private void setupPaymentMethodComboBox() {
         paymentMethodComboBox.setItems(FXCollections.observableArrayList("Cash", "Card", "QR"));
         paymentMethodComboBox.getSelectionModel().select("Cash");
@@ -293,39 +241,26 @@ public class POSController {
         });
     }
 
-    /**
-     * As the cashier types a discount or an amount paid, the Discount/
-     * Tax/Total/Change labels should update live, without needing to
-     * click anything first.
-     */
+    // recalc totals whenever discount or amount paid changes
     private void setupCheckoutListeners() {
         discountField.textProperty().addListener((obs, oldVal, newVal) -> recalculateTotals());
         amountPaidField.textProperty().addListener((obs, oldVal, newVal) -> recalculateTotals());
     }
 
-    /**
-     * Update/Remove only make sense once something is actually selected.
-     */
+    // enable add/update/remove buttons based on current selections
     private void updateActionButtonsState() {
         addToCartButton.setDisable(selectedProduct == null);
         updateQuantityButton.setDisable(selectedCartItem == null);
         removeItemButton.setDisable(selectedCartItem == null);
     }
 
-    // ===================== Data loading / filtering =====================
-
+    // reload products from the service, then reapply filters
     private void refreshProducts() {
         allProducts = productService.getAllProducts();
         applyFilters();
     }
 
-    /**
-     * Filters the cached product list by the search box text (matches
-     * either the ID or the name, case-insensitive) AND the selected
-     * category, the same "both filters apply together" behavior
-     * InventoryController already uses for its own search + category
-     * filter.
-     */
+    // combine search + category filters into one product list
     private void applyFilters() {
         String keyword = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
         String categoryChoice = categoryFilterComboBox.getValue();
@@ -344,20 +279,10 @@ public class POSController {
         productTable.setItems(FXCollections.observableArrayList(filtered));
     }
 
-    /**
-     * Rebuilds the cart table and subtotal label from the Cart object.
-     * Called after every cart change so the UI always matches Cart's state.
-     */
+    // repaint the cart table, subtotal, and totals
     private void refreshCartView() {
         cartTable.setItems(FXCollections.observableArrayList(cart.getItems()));
 
-        // Why this is needed: CartItem does not override equals(), so when
-        // we UPDATE a quantity, TableView sees the exact same CartItem
-        // object (same reference) sitting at the same row index as before
-        // and assumes "nothing changed here" - it skips re-reading that
-        // row's Quantity/Subtotal columns. refresh() forces every visible
-        // row to be redrawn from the current data, regardless of whether
-        // the row objects are new or just mutated in place.
         cartTable.refresh();
 
         subtotalLabel.setText("Subtotal: $" + String.format("%.2f", cart.getSubtotal()));
@@ -365,20 +290,12 @@ public class POSController {
         recalculateTotals();
     }
 
-    /**
-     * Recomputes Discount/Tax/Total/Change from the cart's current
-     * contents plus whatever the cashier has typed/selected on the
-     * checkout panel, and refreshes those labels. This is only a PREVIEW
-     * - it never touches stock or a payment, it just shows the cashier
-     * what checkout would currently charge.
-     */
+    // subtotal -> discount -> tax -> total -> change, live as fields change
     private void recalculateTotals() {
         double discountPercent;
         try {
             discountPercent = parseDiscountPercent();
-        } catch (InvalidDiscountException e) {
-            // Still typing (e.g. field temporarily empty or "-") - just
-            // preview with no discount instead of showing an alert.
+        } catch (InvalidDiscountException e) { // invalid input, treat as no discount yet
             discountPercent = 0;
         }
 
@@ -389,7 +306,7 @@ public class POSController {
         taxAmountLabel.setText("Tax: $" + String.format("%.2f", totals.getTaxAmount()));
         totalLabel.setText("TOTAL: $" + String.format("%.2f", totals.getTotal()));
 
-        if ("Cash".equals(paymentMethodComboBox.getValue())) {
+        if ("Cash".equals(paymentMethodComboBox.getValue())) { // change only applies to cash
             double amountPaid = parseAmountPaidLenient();
             double change = Math.max(amountPaid - totals.getTotal(), 0);
             changeLabel.setText("Change: $" + String.format("%.2f", change));
@@ -398,17 +315,17 @@ public class POSController {
         }
     }
 
-    // ===================== Button actions =====================
-
     @FXML
+    // refresh button: reload product list and categories
     private void handleRefreshProducts() {
         productTable.getSelectionModel().clearSelection();
-        populateCategoryFilterItems(); // pick up any category added/renamed/deleted since this screen opened
+        populateCategoryFilterItems();
         refreshProducts();
         statusMessageLabel.setText("");
     }
 
     @FXML
+    // add-to-cart button
     private void handleAddToCart() {
         if (selectedProduct == null) {
             showError("Please select a product first.");
@@ -427,6 +344,7 @@ public class POSController {
     }
 
     @FXML
+    // update-quantity button for the selected cart item
     private void handleUpdateQuantity() {
         if (selectedCartItem == null) {
             showError("Please select an item in the cart first.");
@@ -438,7 +356,7 @@ public class POSController {
             cart.updateQuantity(productId, newQuantity);
             showSuccess("Quantity updated.");
             refreshCartView();
-            reselectCartItemById(productId); // keep the same row selected after the table reloads
+            reselectCartItemById(productId);
         } catch (NumberFormatException e) {
             showError("Quantity must be a whole number.");
         } catch (InvalidCartOperationException | InsufficientStockException e) {
@@ -447,6 +365,7 @@ public class POSController {
     }
 
     @FXML
+    // remove-item button for the selected cart item
     private void handleRemoveItem() {
         if (selectedCartItem == null) {
             showError("Please select an item in the cart first.");
@@ -464,6 +383,7 @@ public class POSController {
     }
 
     @FXML
+    // clear-cart button, with a confirmation prompt
     private void handleClearCart() {
         if (cart.isEmpty()) {
             showError("The cart is already empty.");
@@ -485,19 +405,11 @@ public class POSController {
         }
     }
 
-    /**
-     * Runs the full checkout process for the current cart:
-     * builds a Discount and a Payment from what the cashier entered, then
-     * hands both to CheckoutService, which validates everything, takes
-     * the payment, deducts stock, and returns a Transaction. Any problem
-     * along the way (empty cart, insufficient stock, bad discount, bad
-     * payment amount, insufficient cash) is shown as an Alert and stops
-     * the checkout - stock and the cart are left untouched.
-     */
     @FXML
+    // checkout button: build payment, run CheckoutService, show receipt
     private void handleCheckout() {
         try {
-            if (cart.isEmpty()) {
+            if (cart.isEmpty()) { // guard: nothing to sell
                 showError("The cart is empty. Add a product before checking out.");
                 return;
             }
@@ -515,8 +427,8 @@ public class POSController {
             showCheckoutSuccess(transaction);
             showReceipt(transaction);
             resetCheckoutForm();
-            refreshProducts();  // stock changed - reload the product table
-            refreshCartView();  // cart is now empty
+            refreshProducts();
+            refreshCartView();
 
         } catch (InvalidCartOperationException | InsufficientStockException
                  | InvalidDiscountException | PaymentException | ReceiptException e) {
@@ -524,17 +436,7 @@ public class POSController {
         }
     }
 
-    /**
-     * Loads the receipt that was just saved for this transaction and
-     * shows it in a simple popup so the cashier can read it right away.
-     *
-     * This re-reads the receipt from disk (via ReceiptService) instead of
-     * keeping the text around in memory, which doubles as a quick check
-     * that the receipt really was saved correctly. If, for some reason,
-     * it cannot be read back (see ReceiptException), the sale itself is
-     * NOT undone - the transaction and stock changes already happened -
-     * the cashier just sees a friendly error instead of the receipt text.
-     */
+    // load and display the receipt that was just saved
     private void showReceipt(Transaction transaction) {
         try {
             String receiptText = receiptService.loadReceiptText(transaction.getReceiptId());
@@ -544,13 +446,7 @@ public class POSController {
         }
     }
 
-    /**
-     * Creates the right kind of Payment for the selected method.
-     *
-     * OOP concept: POLYMORPHISM. The return type is the general "Payment"
-     * type - the caller (handleCheckout) never needs an if/else per
-     * payment type after this point; it just calls payment.processPayment().
-     */
+    // build the right Payment subclass for the chosen method (polymorphism)
     private Payment buildPayment(String method, double total) {
         if ("Cash".equals(method)) {
             double amountPaid = parseAmountPaid();
@@ -562,13 +458,7 @@ public class POSController {
         }
     }
 
-    /**
-     * Parses the discount field strictly - used right before checkout,
-     * where an invalid value should stop checkout with a clear message.
-     *
-     * @throws InvalidDiscountException if the text is missing, not a
-     *                                   number, or outside 0-100
-     */
+    // validate the discount field, 0-100 only
     private double parseDiscountPercent() {
         String text = discountField.getText() == null ? "" : discountField.getText().trim();
         if (text.isEmpty()) {
@@ -586,11 +476,7 @@ public class POSController {
         return value;
     }
 
-    /**
-     * Parses the amount paid field strictly - used right before checkout.
-     *
-     * @throws PaymentException if the text is missing, not a number, or negative
-     */
+    // validate the amount-paid field for cash payments
     private double parseAmountPaid() {
         String text = amountPaidField.getText() == null ? "" : amountPaidField.getText().trim();
         if (text.isEmpty()) {
@@ -608,12 +494,7 @@ public class POSController {
         return amount;
     }
 
-    /**
-     * A forgiving version of parseAmountPaid() used only for the LIVE
-     * Change preview: while the cashier is still typing, the field may be
-     * temporarily empty or invalid, and that should not show an alert -
-     * it should just preview as if $0.00 had been paid so far.
-     */
+    // same as parseAmountPaid, but 0 instead of throwing (for live totals)
     private double parseAmountPaidLenient() {
         try {
             return parseAmountPaid();
@@ -622,9 +503,7 @@ public class POSController {
         }
     }
 
-    /**
-     * Shows a summary Alert confirming the sale completed successfully.
-     */
+    // pop up a summary of the completed sale
     private void showCheckoutSuccess(Transaction transaction) {
         StringBuilder message = new StringBuilder();
         message.append(String.format("Transaction ID: %s%n", transaction.getTransactionId()));
@@ -644,10 +523,7 @@ public class POSController {
         alert.showAndWait();
     }
 
-    /**
-     * Resets the checkout panel back to its defaults after a successful
-     * sale, ready for the next customer.
-     */
+    // reset discount/payment fields after a successful sale
     private void resetCheckoutForm() {
         discountField.setText("0");
         paymentMethodComboBox.getSelectionModel().select("Cash");
@@ -656,6 +532,7 @@ public class POSController {
     }
 
     @FXML
+    // nav: back to dashboard
     private void handleBack() {
         try {
             Main.switchScene("view/dashboard.fxml");
@@ -664,13 +541,7 @@ public class POSController {
         }
     }
 
-    // ===================== Shared helpers =====================
-
-    /**
-     * Re-selects a cart line by product ID after the table data is
-     * reloaded (reloading replaces the table's row list, which clears the
-     * selection).
-     */
+    // re-highlight the cart row after a refresh
     private void reselectCartItemById(String productId) {
         for (CartItem item : cartTable.getItems()) {
             if (item.getProduct().getId().equalsIgnoreCase(productId)) {

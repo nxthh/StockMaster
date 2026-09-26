@@ -1,14 +1,6 @@
 package com.inventory.model;
 
-/**
- * Product represents a single item sold in the store (e.g. a can of soda).
- *
- * OOP concept: ENCAPSULATION.
- * All fields are private, meaning no other class can reach in and change
- * them directly. Instead, other classes must use the public getter and
- * setter methods below. This lets Product control and protect its own
- * data (for example, we could stop a negative price from ever being set).
- */
+// product record + file (de)serialization (encapsulation)
 public class Product {
 
     private String id;
@@ -18,12 +10,6 @@ public class Product {
     private int quantity;
     private int minimumStock;
 
-    /**
-     * OOP concept: CONSTRUCTOR.
-     * A constructor is a special method used to create a new Product object
-     * with all of its required fields already filled in, instead of leaving
-     * it half-empty.
-     */
     public Product(String id, String name, Category category, double price, int quantity, int minimumStock) {
         this.id = id;
         this.name = name;
@@ -32,8 +18,6 @@ public class Product {
         this.quantity = quantity;
         this.minimumStock = minimumStock;
     }
-
-    // ----- Getters -----
 
     public String getId() {
         return id;
@@ -59,8 +43,6 @@ public class Product {
         return minimumStock;
     }
 
-    // ----- Setters (allow controlled changes to a product) -----
-
     public void setName(String name) {
         this.name = name;
     }
@@ -81,19 +63,12 @@ public class Product {
         this.minimumStock = minimumStock;
     }
 
-    /**
-     * Converts this Product into one line of text for saving to
-     * data/products.txt, using commas to separate the fields.
-     * Example: P001,Coca Cola,Drink,1.50,50,10
-     */
+    // serialize: one product per line
     public String toFileLine() {
         return id + "," + name + "," + category.toDisplayString() + "," + price + "," + quantity + "," + minimumStock;
     }
 
-    /**
-     * Parses one line of text from data/products.txt back into a Product
-     * object. This is the reverse of toFileLine().
-     */
+    // deserialize: parse a stored line back into a Product
     public static Product fromFileLine(String line) {
         String[] parts = line.split(",");
         String id = parts[0].trim();

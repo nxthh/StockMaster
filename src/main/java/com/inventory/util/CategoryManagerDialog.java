@@ -23,30 +23,12 @@ import javafx.scene.layout.VBox;
 
 import java.util.Optional;
 
-/**
- * CategoryManagerDialog is a small, reusable popup that lets an Admin
- * view every category, add a new one, rename one, or delete one - full
- * CRUD (Create, Read, Update, Delete) in a single window.
- *
- * OOP concept: this is a UI HELPER, the same idea as ReceiptDialog - it
- * only builds and shows JavaFX controls. It never touches a text file
- * itself and never decides whether a name is valid; every actual rule
- * (no blank names, no duplicates, can't delete a category still in use)
- * lives in CategoryService. This class just calls that service and shows
- * whatever happens, success or error, right inside the dialog.
- */
+// popup dialog for add/rename/delete of categories
 public class CategoryManagerDialog {
 
     private CategoryManagerDialog() {
-    }
+    } // static-only: no instances
 
-    /**
-     * Opens the "Manage Categories" dialog and blocks until the admin
-     * closes it (showAndWait). Any changes made inside (add/rename/
-     * delete) are saved immediately by CategoryService as they happen -
-     * the caller should simply refresh its own category dropdowns once
-     * this method returns.
-     */
     public static void showAndManage(CategoryService categoryService) {
         TableView<Category> table = new TableView<>();
         table.setPrefSize(420, 260);
@@ -86,6 +68,7 @@ public class CategoryManagerDialog {
         Label statusLabel = new Label();
         statusLabel.setWrapText(true);
 
+        // reload the table from the service after every change
         Runnable refreshTable = () ->
                 table.setItems(FXCollections.observableArrayList(categoryService.getAllCategories()));
         refreshTable.run();
@@ -99,7 +82,7 @@ public class CategoryManagerDialog {
             }
         });
 
-        addButton.setOnAction(e -> {
+        addButton.setOnAction(e -> { // create category
             try {
                 categoryService.addCategory(nameField.getText());
                 nameField.clear();
@@ -110,7 +93,7 @@ public class CategoryManagerDialog {
             }
         });
 
-        renameButton.setOnAction(e -> {
+        renameButton.setOnAction(e -> { // rename selected category
             Category selected = table.getSelectionModel().getSelectedItem();
             if (selected == null) {
                 return;
@@ -124,7 +107,7 @@ public class CategoryManagerDialog {
             }
         });
 
-        deleteButton.setOnAction(e -> {
+        deleteButton.setOnAction(e -> { // delete selected category, after confirm
             Category selected = table.getSelectionModel().getSelectedItem();
             if (selected == null) {
                 return;
@@ -164,6 +147,7 @@ public class CategoryManagerDialog {
         dialog.showAndWait();
     }
 
+    // shared success/error message styling for the status label
     private static void showStatus(Label label, String message, boolean isError) {
         label.setText(message);
         label.setStyle(isError ? "-fx-text-fill: #c62828;" : "-fx-text-fill: #2e7d32;");

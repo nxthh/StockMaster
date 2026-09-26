@@ -26,23 +26,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controller for users.fxml - the ADMIN-only "Manage Users" screen.
- *
- * OOP concept: LAYERED ARCHITECTURE.
- * Exactly like every other controller in this project, this class only
- * knows about JavaFX controls and *what* the admin wants to do (see the
- * list of accounts, create a new Cashier account). It never opens
- * data/users.txt itself - it calls UserService and lets that (and
- * UserFileRepository underneath it) deal with the actual file.
- *
- * Permissions: this whole screen is ADMIN-only. The Dashboard already
- * hides/disables the "Manage Users" button for a CASHIER, but this
- * controller checks Session.isAdmin() again when the screen loads (the
- * same "defense in depth" pattern InventoryController and
- * ReportsController already use), in case this screen is ever reached
- * another way.
- */
+// UI controller for users.fxml: admin-only cashier account management
 public class UserController {
 
     @FXML
@@ -69,18 +53,15 @@ public class UserController {
     @FXML
     private Label statusMessageLabel;
 
-    // The controller only talks to a service - never straight to a
-    // Repository or straight to a file, same pattern as every other
-    // controller in this project.
     private final UserFileRepository userFileRepository = new UserFileRepository();
     private final UserService userService = new UserService(userFileRepository);
 
-    // The account currently selected in the table (null if none).
     private User selectedUser;
 
     @FXML
+    // runs on screen load: guard non-admins out, then load the table
     private void initialize() {
-        if (!Session.isAdmin()) {
+        if (!Session.isAdmin()) { // guard: block cashiers from this screen
             Alert alert = new Alert(Alert.AlertType.ERROR,
                     "Managing users is only available to ADMIN users.", ButtonType.OK);
             alert.setTitle("Access Denied");
@@ -96,18 +77,13 @@ public class UserController {
         refreshUsers();
     }
 
+    // wire table columns to User fields
     private void setupTableColumns() {
         usernameColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getUsername()));
         roleColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRole().toString()));
     }
 
-    /**
-     * "Delete Selected Account" only makes sense once a row is actually
-     * selected, and only ever applies to a Cashier row - an Admin row is
-     * never deletable here (see UserService.deleteCashierAccount()), so
-     * the button is disabled for it instead of letting the admin click it
-     * and just see an error every time.
-     */
+    // enable delete only for a selected non-admin row
     private void setupUserSelectionListener() {
         usersTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             selectedUser = newVal;
@@ -121,6 +97,7 @@ public class UserController {
         refreshUsers();
     }
 
+    // reload the table from the service
     private void refreshUsers() {
         List<User> users = userService.getAllUsers();
         usersTable.setItems(FXCollections.observableArrayList(users));
@@ -128,13 +105,8 @@ public class UserController {
         deleteUserButton.setDisable(true);
     }
 
-    /**
-     * Creates a new Cashier account from whatever is currently typed in
-     * the form. UserService does the real validation (empty fields,
-     * mismatched passwords, a username already taken) - this method just
-     * reacts to success or failure.
-     */
     @FXML
+    // add cashier button: validate + create via UserService
     private void handleCreateCashier() {
         try {
             Cashier cashier = userService.createCashierAccount(
@@ -147,14 +119,8 @@ public class UserController {
         }
     }
 
-    /**
-     * Deletes the selected Cashier account, after the admin confirms.
-     * UserService does the real rule-checking (must exist, must be a
-     * Cashier, never an Admin) - this method just asks for confirmation
-     * and reacts to success or failure, the same "confirm then call the
-     * service" pattern POSController.handleClearCart() already uses.
-     */
     @FXML
+    // delete button: confirm, then remove via UserService
     private void handleDeleteUser() {
         if (selectedUser == null) {
             showError("Please select an account to delete.");
@@ -188,6 +154,7 @@ public class UserController {
     }
 
     @FXML
+    // nav: back to dashboard
     private void handleBack() {
         try {
             Main.switchScene("view/dashboard.fxml");

@@ -27,25 +27,9 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Controller for reports.fxml - the ADMIN-only Reports screen, made up of
- * three tabs: Inventory Report, Sales Report, and Low Stock Report.
- *
- * OOP concept: LAYERED ARCHITECTURE.
- * Exactly like every other controller in this project, this class only
- * knows about JavaFX controls and *what* the admin wants to see. It never
- * reads a file or sums numbers itself - it asks ReportService for
- * already-calculated numbers/lists and displays them.
- *
- * Permissions: this whole screen is ADMIN-only. The Dashboard already
- * hides/disables the "Reports" button for a CASHIER, but this controller
- * checks Session.isAdmin() again when the screen loads (the same
- * "defense in depth" pattern InventoryController uses), in case this
- * screen is ever reached another way.
- */
+// UI controller for reports.fxml: admin-only inventory/sales/low-stock views
 public class ReportsController {
 
-    // ----- Inventory Report tab -----
     @FXML
     private Label totalInventoryValueLabel;
     @FXML
@@ -61,7 +45,6 @@ public class ReportsController {
     @FXML
     private TableColumn<Product, String> invValueColumn;
 
-    // ----- Sales Report tab -----
     @FXML
     private DatePicker fromDatePicker;
     @FXML
@@ -77,7 +60,6 @@ public class ReportsController {
     @FXML
     private Label salesStatusLabel;
 
-    // ----- Low Stock Report tab -----
     @FXML
     private TableView<Product> lowStockTable;
     @FXML
@@ -89,8 +71,6 @@ public class ReportsController {
     @FXML
     private TableColumn<Product, String> lowStockStatusColumn;
 
-    // The controller only talks to services - never straight to a
-    // Repository or straight to a file.
     private final ProductFileRepository productFileRepository = new ProductFileRepository();
     private final ProductService productService = new ProductService(productFileRepository);
     private final InventoryService inventoryService = new InventoryService(productFileRepository);
@@ -101,14 +81,12 @@ public class ReportsController {
     private final ReportService reportService =
             new ReportService(productService, inventoryService, transactionService);
 
-    // All transactions the current user is allowed to see, loaded once
-    // when the screen opens and re-used every time the date filter
-    // changes (no need to reload the file just to re-filter dates).
     private List<Transaction> allTransactions;
 
     @FXML
+    // runs on screen load: guard non-admins out, load all three reports
     private void initialize() {
-        if (!Session.isAdmin()) {
+        if (!Session.isAdmin()) { // guard: block cashiers from this screen
             Alert alert = new Alert(Alert.AlertType.ERROR,
                     "Reports are only available to ADMIN users.", ButtonType.OK);
             alert.setTitle("Access Denied");
@@ -128,8 +106,7 @@ public class ReportsController {
         showSalesReport(allTransactions);
     }
 
-    // ===================== Inventory Report =====================
-
+    // wire inventory-value table columns
     private void setupInventoryTable() {
         invProductColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
         invCategoryColumn.setCellValueFactory(data ->
@@ -147,11 +124,7 @@ public class ReportsController {
         refreshInventoryReport();
     }
 
-    /**
-     * Reloads every product (via ProductService, underneath ReportService)
-     * and recalculates each row's inventory value (price x quantity) plus
-     * the grand total inventory value.
-     */
+    // reload inventory table + total value label
     private void refreshInventoryReport() {
         List<Product> products = productService.getAllProducts();
         inventoryTable.setItems(FXCollections.observableArrayList(products));
@@ -159,20 +132,13 @@ public class ReportsController {
                 reportService.getTotalInventoryValue()));
     }
 
-    // ===================== Sales Report =====================
-
-    /**
-     * Called when "Apply Filter" is clicked. An empty DatePicker means
-     * "no bound on that side" (ReportService.filterByDateRange already
-     * treats a null date that way), so leaving one or both pickers empty
-     * still works cleanly instead of causing an error.
-     */
     @FXML
+    // apply filter button: validate range, then re-show sales report
     private void handleApplyDateFilter() {
         LocalDate from = fromDatePicker.getValue();
         LocalDate to = toDatePicker.getValue();
 
-        if (from != null && to != null && from.isAfter(to)) {
+        if (from != null && to != null && from.isAfter(to)) { // guard: invalid range
             salesStatusLabel.setText("\"From\" date must not be after \"To\" date.");
             return;
         }
@@ -182,18 +148,14 @@ public class ReportsController {
     }
 
     @FXML
+    // clear filter button: reset pickers, show unfiltered sales
     private void handleClearDateFilter() {
         fromDatePicker.setValue(null);
         toDatePicker.setValue(null);
         showSalesReport(allTransactions);
     }
 
-    /**
-     * Fills in the four Sales Report labels from whichever transaction
-     * list is currently relevant (all of them, or a date-filtered
-     * subset). All four numbers come straight from ReportService, which
-     * sums Transaction.getTotal()/getDiscountAmount()/getTaxAmount().
-     */
+    // paint the sales summary labels for the given transaction list
     private void showSalesReport(List<Transaction> transactions) {
         totalTransactionsLabel.setText(
                 "Total Transactions: " + reportService.getTotalTransactionCount(transactions));
@@ -206,8 +168,7 @@ public class ReportsController {
         salesStatusLabel.setText(transactions.isEmpty() ? "No transactions found for this range." : "");
     }
 
-    // ===================== Low Stock Report =====================
-
+    // wire low-stock table columns (status column always reads LOW STOCK)
     private void setupLowStockTable() {
         lowStockProductColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
         lowStockQuantityColumn.setCellValueFactory(data ->
@@ -216,7 +177,6 @@ public class ReportsController {
                 new SimpleIntegerProperty(data.getValue().getMinimumStock()).asObject());
         lowStockStatusColumn.setCellValueFactory(data -> new SimpleStringProperty("LOW STOCK"));
 
-        // Same red/bold styling InventoryController uses for its Status column.
         lowStockStatusColumn.setCellFactory(column -> new TableCell<>() {
             @Override
             protected void updateItem(String status, boolean empty) {
@@ -237,20 +197,14 @@ public class ReportsController {
         refreshLowStockReport();
     }
 
-    /**
-     * Shows only products where quantity <= minimumStock, using
-     * InventoryService's rule (via ReportService) - the exact same rule
-     * already used by the Inventory screen's "LOW STOCK" status, so this
-     * report can never disagree with it.
-     */
+    // reload the low-stock table
     private void refreshLowStockReport() {
         List<Product> lowStockProducts = reportService.getLowStockProducts();
         lowStockTable.setItems(FXCollections.observableArrayList(lowStockProducts));
     }
 
-    // ===================== Navigation =====================
-
     @FXML
+    // nav: back to dashboard
     private void handleBack() {
         try {
             Main.switchScene("view/dashboard.fxml");

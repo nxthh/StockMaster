@@ -2,4 +2,3 @@ Drink
 Food
 Dairy
 Furniture
-Ingredients

@@ -38,19 +38,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controller for inventory.fxml.
- *
- * OOP concept: LAYERED ARCHITECTURE.
- * This class only knows about JavaFX controls and *what* the admin wants
- * to do (add, edit, delete, search, stock in/out). It does NOT know how
- * products are validated or how they are saved to disk - that is handled
- * by ProductService, InventoryService, and ProductFileRepository. If we
- * ever changed how products are stored, this class would not need to change.
- */
+// UI controller for inventory.fxml: product CRUD + stock in/out
 public class InventoryController {
 
-    // ----- Search / filter bar -----
     @FXML
     private TextField searchField;
     @FXML
@@ -60,7 +50,6 @@ public class InventoryController {
     @FXML
     private Button manageCategoriesButton;
 
-    // ----- Table -----
     @FXML
     private TableView<Product> productTable;
     @FXML
@@ -78,7 +67,6 @@ public class InventoryController {
     @FXML
     private TableColumn<Product, String> statusColumn;
 
-    // ----- Add/Edit form -----
     @FXML
     private TextField idField;
     @FXML
@@ -98,7 +86,6 @@ public class InventoryController {
     @FXML
     private Button deleteButton;
 
-    // ----- Stock adjustment -----
     @FXML
     private Label selectedProductLabel;
     @FXML
@@ -108,34 +95,23 @@ public class InventoryController {
     @FXML
     private Button stockOutButton;
 
-    // ----- Feedback -----
     @FXML
     private Label statusMessageLabel;
 
-    // The Controller talks only to these Services - never straight to a
-    // Repository or straight to a file.
     private final ProductFileRepository productFileRepository = new ProductFileRepository();
     private final CategoryFileRepository categoryFileRepository = new CategoryFileRepository();
     private final ProductService productService = new ProductService(productFileRepository);
     private final InventoryService inventoryService = new InventoryService(productFileRepository);
     private final CategoryService categoryService = new CategoryService(categoryFileRepository, productFileRepository);
 
-    // Special entry shown at the bottom of the Add/Edit form's category
-    // dropdown. Picking it (instead of a real category) opens a small
-    // prompt to type a brand new category name.
     private static final String ADD_NEW_CATEGORY_OPTION = "+ Add New Category";
 
-    // The full, unfiltered list of products loaded from the service. The
-    // table only ever shows a filtered copy of this list (see applyFilters).
     private List<Product> allProducts = new ArrayList<>();
 
-    // The product currently selected in the table (null if none selected).
     private Product selectedProduct;
 
-    /**
-     * Called automatically by JavaFX right after inventory.fxml is loaded.
-     */
     @FXML
+    // runs on screen load: build table, filters, listeners, permissions
     private void initialize() {
         setupTableColumns();
         setupFilterControls();
@@ -144,8 +120,7 @@ public class InventoryController {
         refreshData();
     }
 
-    // ===================== Setup helpers =====================
-
+    // wire table columns to Product fields
     private void setupTableColumns() {
         idColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getId()));
         nameColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
@@ -160,7 +135,6 @@ public class InventoryController {
         statusColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(inventoryService.isLowStock(data.getValue()) ? "LOW STOCK" : "OK"));
 
-        // Color the Status column so LOW STOCK visually stands out.
         statusColumn.setCellFactory(column -> new TableCell<>() {
             @Override
             protected void updateItem(String status, boolean empty) {
@@ -178,23 +152,16 @@ public class InventoryController {
         });
     }
 
+    // wire search box, category filter, and category combo box
     private void setupFilterControls() {
-        // Category filter (top bar): "All" plus every category that exists
-        // right now. Loaded from CategoryService (not hard-coded), so a
-        // brand new category the admin creates shows up here too.
         refreshCategoryFilterItems();
         categoryFilterComboBox.setValue("All");
         categoryFilterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
 
-        // Live search as the admin types.
         searchField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
 
-        // Category dropdown used inside the Add/Edit form: every real
-        // category, plus a special "+ Add New Category" entry at the end.
         refreshCategoryFormItems();
 
-        // Selecting "+ Add New Category" opens a small prompt instead of
-        // being treated as a real category choice.
         categoryFormComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (ADD_NEW_CATEGORY_OPTION.equals(newVal)) {
                 promptForNewCategory(oldVal);
@@ -202,12 +169,7 @@ public class InventoryController {
         });
     }
 
-    /**
-     * Refills the top-bar category filter with "All" plus every category
-     * currently saved. Called on load and again whenever the category
-     * list may have changed (a new category was added, or the "Manage
-     * Categories" dialog was used).
-     */
+    // reload the category filter dropdown from CategoryService
     private void refreshCategoryFilterItems() {
         String previousValue = categoryFilterComboBox.getValue();
         List<String> items = new ArrayList<>();
@@ -217,25 +179,14 @@ public class InventoryController {
         categoryFilterComboBox.setValue(items.contains(previousValue) ? previousValue : "All");
     }
 
-    /**
-     * Refills the Add/Edit form's category dropdown with every category
-     * currently saved, plus the "+ Add New Category" entry at the end.
-     */
+    // reload the add/edit form's category dropdown
     private void refreshCategoryFormItems() {
         List<String> items = new ArrayList<>(categoryService.getAllCategoryNames());
         items.add(ADD_NEW_CATEGORY_OPTION);
         categoryFormComboBox.setItems(FXCollections.observableArrayList(items));
     }
 
-    /**
-     * Asks the admin to type a brand new category name (a plain
-     * TextInputDialog - simple, built straight into JavaFX). On success,
-     * the new category is saved through CategoryService, both category
-     * dropdowns are refreshed, and the new category is selected right
-     * away so the admin can keep filling in the rest of the product form.
-     * On cancel (or an invalid/duplicate name), the dropdown falls back
-     * to whatever was selected before "+ Add New Category" was chosen.
-     */
+    // "+ Add New Category" option: prompt, create, select it
     private void promptForNewCategory(String previousValue) {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Add New Category");
@@ -260,12 +211,13 @@ public class InventoryController {
         }
     }
 
+    // fill the edit form when a table row is selected
     private void setupSelectionListener() {
         productTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             selectedProduct = newVal;
             if (newVal != null) {
                 idField.setText(newVal.getId());
-                idField.setDisable(true); // the ID of an existing product cannot be changed
+                idField.setDisable(true);
                 nameField.setText(newVal.getName());
                 categoryFormComboBox.setValue(newVal.getCategory().getName());
                 priceField.setText(String.valueOf(newVal.getPrice()));
@@ -280,12 +232,7 @@ public class InventoryController {
         });
     }
 
-    /**
-     * Enables/disables everything a CASHIER must not be able to use.
-     * Called once on load. (Cashiers normally never even reach this screen,
-     * since the Dashboard's Inventory button is disabled for them - this is
-     * a second layer of protection in case this screen is ever opened another way.)
-     */
+    // lock admin-only controls for cashiers
     private void applyPermissions() {
         boolean admin = Session.isAdmin();
         addButton.setDisable(!admin);
@@ -302,10 +249,7 @@ public class InventoryController {
         updateActionButtonsState();
     }
 
-    /**
-     * Update/Delete/Stock In/Stock Out all require BOTH: an admin user AND
-     * a product currently selected in the table.
-     */
+    // enable update/delete/stock buttons only for admin + a selection
     private void updateActionButtonsState() {
         boolean allowed = Session.isAdmin() && selectedProduct != null;
         updateButton.setDisable(!allowed);
@@ -314,17 +258,13 @@ public class InventoryController {
         stockOutButton.setDisable(!allowed);
     }
 
-    // ===================== Data loading / filtering =====================
-
+    // reload products from the service, then reapply filters
     private void refreshData() {
         allProducts = productService.getAllProducts();
         applyFilters();
     }
 
-    /**
-     * Rebuilds the table's visible rows by combining the search box, the
-     * category filter, and the Low Stock toggle. All three work together.
-     */
+    // combine search + category + low-stock filters into one list
     private void applyFilters() {
         String keyword = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
         String categoryChoice = categoryFilterComboBox.getValue();
@@ -348,9 +288,8 @@ public class InventoryController {
         productTable.setItems(FXCollections.observableArrayList(filtered));
     }
 
-    // ===================== Button actions =====================
-
     @FXML
+    // refresh button: reset form and reload everything
     private void handleRefresh() {
         handleClearForm();
         refreshCategoryFilterItems();
@@ -360,18 +299,13 @@ public class InventoryController {
     }
 
     @FXML
+    // low-stock toggle button
     private void handleLowStockToggle() {
         applyFilters();
     }
 
-    /**
-     * Opens the full Category CRUD dialog (add/rename/delete). Once the
-     * admin closes it, both category dropdowns and the product table are
-     * refreshed - a rename can change the category text shown on
-     * existing products, and a delete/add changes what should be offered
-     * as a filter or form choice.
-     */
     @FXML
+    // manage-categories button: opens CategoryManagerDialog
     private void handleManageCategories() {
         if (!Session.isAdmin()) {
             return;
@@ -383,6 +317,7 @@ public class InventoryController {
     }
 
     @FXML
+    // add button: build product from form, validate, persist
     private void handleAddProduct() {
         if (!Session.isAdmin()) {
             return;
@@ -401,6 +336,7 @@ public class InventoryController {
     }
 
     @FXML
+    // update button: build product from form, validate, persist
     private void handleUpdateProduct() {
         if (!Session.isAdmin()) {
             return;
@@ -423,6 +359,7 @@ public class InventoryController {
     }
 
     @FXML
+    // delete button: confirm, then remove the selected product
     private void handleDeleteProduct() {
         if (!Session.isAdmin()) {
             return;
@@ -452,6 +389,7 @@ public class InventoryController {
     }
 
     @FXML
+    // clear the add/edit form and selection
     private void handleClearForm() {
         productTable.getSelectionModel().clearSelection();
         selectedProduct = null;
@@ -467,16 +405,19 @@ public class InventoryController {
     }
 
     @FXML
+    // stock-in button
     private void handleStockIn() {
         adjustStock(true);
     }
 
     @FXML
+    // stock-out button
     private void handleStockOut() {
         adjustStock(false);
     }
 
     @FXML
+    // nav: back to dashboard
     private void handleBack() {
         try {
             Main.switchScene("view/dashboard.fxml");
@@ -485,13 +426,7 @@ public class InventoryController {
         }
     }
 
-    // ===================== Shared helpers =====================
-
-    /**
-     * Reads the Add/Edit form fields and builds a Product object out of
-     * them. Numeric parsing errors are allowed to throw NumberFormatException,
-     * which the calling handler catches and turns into a friendly Alert.
-     */
+    // read + validate form fields into a new Product object
     private Product buildProductFromForm() {
         String id = idField.getText() == null ? "" : idField.getText().trim();
         String name = nameField.getText() == null ? "" : nameField.getText().trim();
@@ -509,10 +444,7 @@ public class InventoryController {
         return new Product(id, name, category, price, quantity, minimumStock);
     }
 
-    /**
-     * Shared logic for both Stock In and Stock Out, since they only differ
-     * in which InventoryService method gets called.
-     */
+    // shared logic for the stock-in/stock-out buttons
     private void adjustStock(boolean isStockIn) {
         if (!Session.isAdmin()) {
             return;
@@ -536,7 +468,7 @@ public class InventoryController {
 
             stockAmountField.clear();
             refreshData();
-            reselectProductById(productId); // keep the same row selected so the admin sees the new quantity
+            reselectProductById(productId);
         } catch (NumberFormatException e) {
             showError("Amount must be a whole number.");
         } catch (InvalidProductException | InsufficientStockException | ProductNotFoundException e) {
@@ -544,10 +476,7 @@ public class InventoryController {
         }
     }
 
-    /**
-     * Re-selects a product by ID after the table data is reloaded.
-     * (Reloading replaces the table's row list, which clears the selection.)
-     */
+    // re-highlight the product row after a refresh
     private void reselectProductById(String productId) {
         for (Product product : productTable.getItems()) {
             if (product.getId().equalsIgnoreCase(productId)) {

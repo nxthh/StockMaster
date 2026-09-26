@@ -9,15 +9,7 @@ import com.inventory.repository.ProductFileRepository;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * InventoryService contains the business rules for managing STOCK LEVELS
- * of products: adding stock, removing stock, and detecting low stock.
- *
- * This is kept separate from ProductService, which manages the product's
- * general details (name, price, category). InventoryService focuses only
- * on quantity-related operations. This is the OOP idea of giving each
- * class a single, clear responsibility.
- */
+// business logic for stock levels (in/out), separate from ProductService
 public class InventoryService {
 
     private final ProductFileRepository productFileRepository;
@@ -26,12 +18,7 @@ public class InventoryService {
         this.productFileRepository = productFileRepository;
     }
 
-    /**
-     * Increases a product's quantity by the given amount (e.g. new stock
-     * arrives from a supplier) and saves the change.
-     *
-     * @throws InvalidProductException if amount is not positive
-     */
+    // increase quantity, e.g. restocking
     public void stockIn(String productId, int amount) {
         if (amount <= 0) {
             throw new InvalidProductException("Stock-in amount must be greater than zero.");
@@ -42,13 +29,7 @@ public class InventoryService {
         productFileRepository.update(product);
     }
 
-    /**
-     * Decreases a product's quantity by the given amount (e.g. a sale or
-     * damaged stock) and saves the change.
-     *
-     * @throws InvalidProductException      if amount is not positive
-     * @throws InsufficientStockException   if there is not enough stock available
-     */
+    // decrease quantity, e.g. a sale; guards against overselling
     public void stockOut(String productId, int amount) {
         if (amount <= 0) {
             throw new InvalidProductException("Stock-out amount must be greater than zero.");
@@ -66,18 +47,11 @@ public class InventoryService {
         productFileRepository.update(product);
     }
 
-    /**
-     * A product is considered low stock when its quantity has dropped to,
-     * or below, its minimum stock level.
-     */
     public boolean isLowStock(Product product) {
         return product.getQuantity() <= product.getMinimumStock();
     }
 
-    /**
-     * Returns every product that is currently low on stock, so the UI can
-     * warn the user (e.g. "Reorder Bread - only 3 left").
-     */
+    // products at or below their minimum stock level
     public List<Product> getLowStockProducts() {
         List<Product> lowStockProducts = new ArrayList<>();
 
@@ -89,10 +63,6 @@ public class InventoryService {
         return lowStockProducts;
     }
 
-    /**
-     * Looks up a product by ID, or throws ProductNotFoundException if it
-     * does not exist. Shared helper used by stockIn() and stockOut().
-     */
     private Product findProductOrThrow(String productId) {
         return productFileRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(

@@ -10,46 +10,17 @@ import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * ReceiptFileRepository is responsible for ALL reading and writing of
- * receipt text files inside the data/receipts/ folder.
- *
- * OOP concept: SEPARATION OF RESPONSIBILITIES.
- * Just like ProductFileRepository and TransactionFileRepository, this is
- * the ONLY class in the whole application that knows where receipts live
- * on disk and what their file names look like. ReceiptService never opens
- * a file itself - it asks this class to save or load a receipt and lets
- * this class deal with the folder, the file name, and any I/O errors.
- *
- * Storage format: unlike products or transactions, a receipt is not saved
- * as structured data (comma-separated fields) - it is saved as ONE plain
- * text file per receipt, already formatted exactly the way it should be
- * printed/shown to the cashier. This keeps things simple: there is nothing
- * to "parse" back, the saved text IS the receipt.
- *
- * Each receipt is saved as: data/receipts/R0001.txt, data/receipts/R0002.txt, ...
- */
+// file I/O layer: one .txt file per receipt in data/receipts
 public class ReceiptFileRepository {
 
     private static final String RECEIPTS_FOLDER = "data/receipts";
     private static final Pattern RECEIPT_ID_PATTERN = Pattern.compile("R(\\d+)\\.txt", Pattern.CASE_INSENSITIVE);
 
-    /**
-     * Creates the repository and makes sure the data/receipts/ folder
-     * exists, so every other method can assume the folder is at least
-     * present.
-     */
     public ReceiptFileRepository() {
         createFolderIfMissing();
     }
 
-    /**
-     * Works out the next receipt ID to use, e.g. "R0001", "R0002",
-     * "R0003"... by looking at the highest numbered receipt file already
-     * saved in data/receipts/ and adding one. Because this always
-     * re-reads the folder instead of counting in memory, IDs stay unique
-     * even after the application is restarted.
-     */
+    // scan receipt files and return the next Rxxxx id
     public String generateNextReceiptId() {
         int highestNumber = 0;
         Path folder = Path.of(RECEIPTS_FOLDER);
@@ -71,14 +42,7 @@ public class ReceiptFileRepository {
         return String.format("R%04d", nextNumber);
     }
 
-    /**
-     * Saves the given receipt text to data/receipts/{receiptId}.txt.
-     * If a file with that ID somehow already exists, it is overwritten -
-     * this should not normally happen since generateNextReceiptId()
-     * always returns a fresh, unused ID.
-     *
-     * @throws ReceiptException if the file cannot be written
-     */
+    // write one receipt's text to its own file
     public void saveReceipt(String receiptId, String content) {
         if (receiptId == null || receiptId.isBlank()) {
             throw new ReceiptException("Cannot save a receipt without a receipt ID.");
@@ -92,12 +56,6 @@ public class ReceiptFileRepository {
         }
     }
 
-    /**
-     * Reads a previously saved receipt back from disk.
-     *
-     * @throws ReceiptException if the receipt file does not exist or
-     *                          cannot be read
-     */
     public String loadReceipt(String receiptId) {
         if (receiptId == null || receiptId.isBlank()) {
             throw new ReceiptException("No receipt ID was provided.");
@@ -113,13 +71,6 @@ public class ReceiptFileRepository {
         }
     }
 
-    /**
-     * Deletes the saved receipt file for the given ID, if it exists.
-     * Does nothing (no error) if there is no receipt with that ID -
-     * deleting something that is already gone is not a failure.
-     * Used when an Admin deletes a transaction, so its receipt does not
-     * stick around as an orphaned file.
-     */
     public void deleteReceipt(String receiptId) {
         if (receiptId == null || receiptId.isBlank()) {
             return;
@@ -131,12 +82,6 @@ public class ReceiptFileRepository {
         }
     }
 
-    /**
-     * Checks whether a receipt with the given ID exists on disk, without
-     * throwing if it does not. Useful for callers (like the Transaction
-     * History screen) that want to disable a "View Receipt" button
-     * instead of showing an error.
-     */
     public boolean receiptExists(String receiptId) {
         if (receiptId == null || receiptId.isBlank()) {
             return false;
@@ -144,11 +89,6 @@ public class ReceiptFileRepository {
         return Files.exists(Path.of(RECEIPTS_FOLDER, receiptId + ".txt"));
     }
 
-    /**
-     * Pulls the numeric part out of a file name like "R0007.txt" -> 7.
-     * Returns 0 for any file name that does not follow the expected
-     * pattern, so one oddly-named file cannot break ID generation.
-     */
     private int extractNumber(String fileName) {
         Matcher matcher = RECEIPT_ID_PATTERN.matcher(fileName);
         if (!matcher.matches()) {
@@ -161,10 +101,7 @@ public class ReceiptFileRepository {
         }
     }
 
-    /**
-     * Creates the data/receipts/ folder (and data/ itself, if needed) if
-     * it does not already exist.
-     */
+    // first run: ensure the receipts folder exists
     private void createFolderIfMissing() {
         try {
             Files.createDirectories(Path.of(RECEIPTS_FOLDER));

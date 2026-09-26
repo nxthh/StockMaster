@@ -12,35 +12,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * CategoryFileRepository is responsible for ALL reading and writing of
- * category data to and from the text file data/categories.txt (one
- * category name per line).
- *
- * OOP concept: SEPARATION OF RESPONSIBILITIES / LAYERED ARCHITECTURE.
- * This class follows the exact same shape as ProductFileRepository: it
- * is the ONLY class that touches data/categories.txt directly. Services
- * and controllers never open this file themselves - they go through
- * CategoryService, which goes through this repository.
- */
+// file I/O layer: reads/writes categories.txt
 public class CategoryFileRepository {
 
     private static final String FILE_PATH = "data/categories.txt";
 
-    /**
-     * Creates the repository and makes sure data/categories.txt exists.
-     * If it is missing, it is created with the four categories the
-     * products already saved in data/products.txt were using before
-     * categories became editable, so existing data keeps working.
-     */
     public CategoryFileRepository() {
         createFileWithDefaultsIfMissing();
     }
 
-    /**
-     * Reads every line from data/categories.txt and converts each line
-     * into a Category object.
-     */
+    // read every category line into memory
     public List<Category> loadAll() {
         List<Category> categories = new ArrayList<>();
 
@@ -49,7 +30,7 @@ public class CategoryFileRepository {
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
                 if (line.isEmpty()) {
-                    continue; // skip blank lines
+                    continue;
                 }
                 try {
                     categories.add(new Category(line));
@@ -64,10 +45,7 @@ public class CategoryFileRepository {
         return categories;
     }
 
-    /**
-     * Writes the given list of categories to data/categories.txt,
-     * replacing whatever was there before.
-     */
+    // overwrite the file with the full current list
     public void saveAll(List<Category> categories) {
         try (FileWriter writer = new FileWriter(FILE_PATH)) {
             for (Category category : categories) {
@@ -79,19 +57,13 @@ public class CategoryFileRepository {
         }
     }
 
-    /**
-     * Adds a new category and immediately saves the updated list to disk.
-     */
     public void add(Category category) {
         List<Category> categories = loadAll();
         categories.add(category);
         saveAll(categories);
     }
 
-    /**
-     * Renames an existing category (matched by its current name) and
-     * saves the change to disk.
-     */
+    // find by name, replace, then rewrite the whole file
     public void update(String currentName, Category updatedCategory) {
         List<Category> categories = loadAll();
         for (int i = 0; i < categories.size(); i++) {
@@ -103,19 +75,12 @@ public class CategoryFileRepository {
         saveAll(categories);
     }
 
-    /**
-     * Removes the category with the given name and saves the change to disk.
-     */
     public void delete(String name) {
         List<Category> categories = loadAll();
         categories.removeIf(category -> category.getName().equalsIgnoreCase(name));
         saveAll(categories);
     }
 
-    /**
-     * Searches the saved categories for one matching the given name
-     * (case-insensitive).
-     */
     public Optional<Category> findByName(String name) {
         for (Category category : loadAll()) {
             if (category.getName().equalsIgnoreCase(name)) {
@@ -125,17 +90,13 @@ public class CategoryFileRepository {
         return Optional.empty();
     }
 
-    /**
-     * Creates the data folder and categories.txt file with the four
-     * starter categories if they do not already exist. This runs once,
-     * the first time the application starts.
-     */
+    // first run: seed the data file with default categories
     private void createFileWithDefaultsIfMissing() {
         try {
             Path filePath = Path.of(FILE_PATH);
 
             if (Files.exists(filePath)) {
-                return; // file already exists, nothing to do
+                return;
             }
 
             if (filePath.getParent() != null) {
