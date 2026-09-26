@@ -350,6 +350,16 @@ public class POSController {
      */
     private void refreshCartView() {
         cartTable.setItems(FXCollections.observableArrayList(cart.getItems()));
+
+        // Why this is needed: CartItem does not override equals(), so when
+        // we UPDATE a quantity, TableView sees the exact same CartItem
+        // object (same reference) sitting at the same row index as before
+        // and assumes "nothing changed here" - it skips re-reading that
+        // row's Quantity/Subtotal columns. refresh() forces every visible
+        // row to be redrawn from the current data, regardless of whether
+        // the row objects are new or just mutated in place.
+        cartTable.refresh();
+
         subtotalLabel.setText("Subtotal: $" + String.format("%.2f", cart.getSubtotal()));
         checkoutButton.setDisable(cart.isEmpty());
         recalculateTotals();
@@ -509,7 +519,7 @@ public class POSController {
             refreshCartView();  // cart is now empty
 
         } catch (InvalidCartOperationException | InsufficientStockException
-                | InvalidDiscountException | PaymentException | ReceiptException e) {
+                 | InvalidDiscountException | PaymentException | ReceiptException e) {
             showError(e.getMessage());
         }
     }
