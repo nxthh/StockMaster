@@ -30,6 +30,14 @@ import java.io.IOException;
  */
 public class Main extends Application {
 
+    // Every screen (login, dashboard, POS, inventory, etc.) is shown at
+    // this same size, instead of each .fxml file's own prefWidth/prefHeight
+    // resizing the window on every navigation. The POS screen is the
+    // biggest/busiest screen in the app, so its size (1100x760) was picked
+    // as the fixed size for the whole application window.
+    private static final double WINDOW_WIDTH = 1100;
+    private static final double WINDOW_HEIGHT = 760;
+
     // Keep a single reference to the main window (the "Stage").
     // Every scene we switch to will be displayed on this same window.
     private static Stage primaryStage;
@@ -39,8 +47,13 @@ public class Main extends Application {
         primaryStage = stage;
         primaryStage.setTitle("Inventory Management & POS System");
 
+        // Fixed window size: the stage never grows/shrinks between screens.
+        primaryStage.setWidth(WINDOW_WIDTH);
+        primaryStage.setHeight(WINDOW_HEIGHT);
+
         switchScene("view/login.fxml");
 
+        primaryStage.centerOnScreen();
         primaryStage.setResizable(true);
         primaryStage.show();
     }
@@ -64,6 +77,13 @@ public class Main extends Application {
             scene.getStylesheets().add(Main.class.getResource("view/style.css").toExternalForm());
 
             primaryStage.setScene(scene);
+
+            // Force every screen back to the same fixed size. Without this,
+            // switching to a screen whose FXML root has a smaller
+            // prefWidth/prefHeight (e.g. the login screen) would shrink the
+            // window instead of keeping it at the app's fixed size.
+            primaryStage.setWidth(WINDOW_WIDTH);
+            primaryStage.setHeight(WINDOW_HEIGHT);
         } catch (IOException e) {
             // Before this try/catch, a failure here (e.g. an fx:id typo in
             // the FXML, or an exception thrown inside a controller's
