@@ -41,6 +41,7 @@
 
                 <ToggleButton fx:id="lowStockToggleButton" text="Low Stock" onAction="#handleLowStockToggle"/>
                 <Button text="Refresh" onAction="#handleRefresh"/>
+                <Button fx:id="manageCategoriesButton" text="Manage Categories" onAction="#handleManageCategories"/>
             </HBox>
         </VBox>
     </top>

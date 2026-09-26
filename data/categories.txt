@@ -1,0 +1,4 @@
+Drink
+Food
+Dairy
+Furniture

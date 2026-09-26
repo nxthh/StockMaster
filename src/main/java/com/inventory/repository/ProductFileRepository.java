@@ -161,11 +161,11 @@ public class ProductFileRepository {
             }
 
             List<Product> sampleProducts = new ArrayList<>();
-            sampleProducts.add(new Product("P001", "Coca Cola", Category.DRINK, 1.50, 50, 10));
-            sampleProducts.add(new Product("P002", "Pepsi", Category.DRINK, 1.50, 30, 10));
-            sampleProducts.add(new Product("P003", "Bread", Category.FOOD, 2.00, 15, 5));
-            sampleProducts.add(new Product("P004", "Milk", Category.DAIRY, 2.50, 20, 5));
-            sampleProducts.add(new Product("P005", "Instant Noodles", Category.FOOD, 1.25, 40, 10));
+            sampleProducts.add(new Product("P001", "Coca Cola", new Category("Drink"), 1.50, 50, 10));
+            sampleProducts.add(new Product("P002", "Pepsi", new Category("Drink"), 1.50, 30, 10));
+            sampleProducts.add(new Product("P003", "Bread", new Category("Food"), 2.00, 15, 5));
+            sampleProducts.add(new Product("P004", "Milk", new Category("Dairy"), 2.50, 20, 5));
+            sampleProducts.add(new Product("P005", "Instant Noodles", new Category("Food"), 1.25, 40, 10));
 
             saveAll(sampleProducts);
         } catch (IOException e) {

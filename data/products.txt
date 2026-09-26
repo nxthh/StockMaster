@@ -5,3 +5,4 @@ P004,Milk,Dairy,2.5,20,5
 P005,Instant Noodles,Food,1.25,35,10
 P006,Monster Energy Drink,Drink,3.0,22,10
 P007,Redbull,Drink,2.0,48,10
+P008,Chair,Furniture,15.0,30,5

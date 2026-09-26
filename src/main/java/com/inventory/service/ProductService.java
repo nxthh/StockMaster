@@ -116,7 +116,7 @@ public class ProductService {
         List<Product> results = new ArrayList<>();
 
         for (Product product : getAllProducts()) {
-            if (product.getCategory() == category) {
+            if (product.getCategory().equals(category)) {
                 results.add(product);
             }
         }

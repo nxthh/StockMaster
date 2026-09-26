@@ -16,9 +16,11 @@ import com.inventory.model.payment.CardPayment;
 import com.inventory.model.payment.CashPayment;
 import com.inventory.model.payment.Payment;
 import com.inventory.model.payment.QRPayment;
+import com.inventory.repository.CategoryFileRepository;
 import com.inventory.repository.ProductFileRepository;
 import com.inventory.repository.ReceiptFileRepository;
 import com.inventory.repository.TransactionFileRepository;
+import com.inventory.service.CategoryService;
 import com.inventory.service.CheckoutService;
 import com.inventory.service.InventoryService;
 import com.inventory.service.ProductService;
@@ -137,8 +139,10 @@ public class POSController {
     // The Controller talks only to services for product/stock/checkout
     // work - never straight to a Repository or straight to a file.
     private final ProductFileRepository productFileRepository = new ProductFileRepository();
+    private final CategoryFileRepository categoryFileRepository = new CategoryFileRepository();
     private final ProductService productService = new ProductService(productFileRepository);
     private final InventoryService inventoryService = new InventoryService(productFileRepository);
+    private final CategoryService categoryService = new CategoryService(categoryFileRepository, productFileRepository);
 
     // Part 6A: handles all reading/writing of data/transactions.txt, so
     // this controller never has to touch File I/O directly.
@@ -241,15 +245,32 @@ public class POSController {
     }
 
     /**
-     * Fills the Category ComboBox with "All" plus every real category, the
-     * exact same list/pattern InventoryController already uses for its own
-     * category filter. Picking a category re-filters the product table
-     * together with whatever is currently typed in the search box.
+     * Fills the Category ComboBox with "All" plus every category that
+     * currently exists, loaded live from CategoryService (not a
+     * hard-coded list) so a category an Admin creates on the Inventory
+     * screen is immediately available here too. Picking a category
+     * re-filters the product table together with whatever is currently
+     * typed in the search box.
      */
     private void setupCategoryFilterComboBox() {
-        categoryFilterComboBox.setItems(FXCollections.observableArrayList("All", "Drink", "Food", "Dairy", "Other"));
-        categoryFilterComboBox.setValue("All");
+        populateCategoryFilterItems();
         categoryFilterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
+    }
+
+    /**
+     * Reloads just the ComboBox's items from CategoryService, keeping the
+     * current selection if it still exists (falling back to "All"
+     * otherwise). Separate from setupCategoryFilterComboBox() so it can be
+     * called again later (e.g. handleRefreshProducts()) without attaching
+     * a second, duplicate listener each time.
+     */
+    private void populateCategoryFilterItems() {
+        String previousValue = categoryFilterComboBox.getValue();
+        List<String> items = new ArrayList<>();
+        items.add("All");
+        items.addAll(categoryService.getAllCategoryNames());
+        categoryFilterComboBox.setItems(FXCollections.observableArrayList(items));
+        categoryFilterComboBox.setValue(items.contains(previousValue) ? previousValue : "All");
     }
 
     /**
@@ -372,6 +393,7 @@ public class POSController {
     @FXML
     private void handleRefreshProducts() {
         productTable.getSelectionModel().clearSelection();
+        populateCategoryFilterItems(); // pick up any category added/renamed/deleted since this screen opened
         refreshProducts();
         statusMessageLabel.setText("");
     }

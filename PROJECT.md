@@ -2,11 +2,86 @@
 
 ## Current Status
 
-Parts 1, 2, 3, 4, 5, 6A, 6B, 7, 8 (Final Integration), and 9 (UI polish +
-Admin account/history management) are complete (Parts 4, 5, 6B, and 9
-were verified with a real compiler and a real JavaFX runtime; Parts 7
-and 8 could only be verified by hand-review - see their own Testing
-Notes sections for why).
+Parts 1, 2, 3, 4, 5, 6A, 6B, 7, 8 (Final Integration), 9 (UI polish +
+Admin account/history management), and 10 (Editable Categories + Category
+CRUD) are complete (Parts 4, 5, 6B, 9, and 10 were verified with a real
+compiler and a real JavaFX runtime; Parts 7 and 8 could only be verified
+by hand-review - see their own Testing Notes sections for why).
+
+- **Part 10 - Categories became editable data instead of a fixed list:**
+  - **Why this was a real architecture change, not just a UI tweak**:
+    `Category` was a Java `enum` (`DRINK`, `FOOD`, `DAIRY`, `OTHER`) -
+    great when the set of options never changes, but an enum's values are
+    fixed at compile time and can never grow while the program is
+    running. Since the request was "let the Admin add a brand new
+    category from the Inventory screen," an enum could not do that job
+    any more, so `Category` (`model`) was converted into a normal class
+    that wraps a name, with `equals()`/`hashCode()` overridden so two
+    categories with the same name (ignoring case) are treated as equal.
+    Every existing call site (`Category.fromString(text)`,
+    `category.toDisplayString()`) kept the exact same method names and
+    behavior, so `Product`, `Transaction`, `ReportsController`, and the
+    file format of `data/products.txt` needed **no changes at all**.
+  - **`data/categories.txt` + `CategoryFileRepository` (`repository`)** -
+    the list of categories now lives in its own text file (one name per
+    line), read/written by a new repository that follows the exact same
+    shape as `ProductFileRepository`: auto-creates the file with the
+    four categories products were already using (`Drink`, `Food`,
+    `Dairy`, `Other`) if it is missing, and skips a corrupted line
+    instead of crashing.
+  - **`CategoryService` (`service`)** - validation and business rules:
+    rejects a blank name, rejects a duplicate name (case-insensitive) on
+    add or rename, and blocks **deleting** a category that any existing
+    product still uses (`CategoryInUseException`, reporting how many
+    products). **Renaming** a category updates every product using the
+    old name so nothing is left pointing at a category that no longer
+    exists. New exceptions, same small-RuntimeException-per-concern
+    pattern as the rest of the project: `InvalidCategoryException`,
+    `DuplicateCategoryException`, `CategoryNotFoundException`,
+    `CategoryInUseException`.
+  - **"+ Add New Category" in the Inventory Add/Edit form**:
+    `InventoryController`'s category dropdown (now a plain
+    `ComboBox<String>` instead of `ComboBox<Category>`) is filled from
+    `CategoryService` plus one extra `"+ Add New Category"` entry at the
+    bottom. Picking it opens a plain JavaFX `TextInputDialog` asking for
+    a name; a valid name is saved through `CategoryService`, both this
+    dropdown and the top-bar category filter dropdown are refreshed, and
+    the new category is selected immediately so the Admin can keep
+    filling in the rest of the product form - exactly the "type a new
+    category once, then pick it from the dropdown afterwards" behavior
+    that was asked for. Cancelling, or a blank/duplicate name, falls back
+    to whatever was selected before.
+  - **"Manage Categories" - full CRUD in one dialog
+    (`util/CategoryManagerDialog`)**: a new button next to the Inventory
+    screen's category filter (Admin-only, like every other inventory
+    edit action) opens a popup - the same "small reusable JavaFX Dialog"
+    idea `ReceiptDialog` already used - showing every category in a
+    table alongside how many products currently use it, with Add /
+    Rename Selected / Delete Selected controls and inline
+    success/error feedback. Delete asks for confirmation first and is
+    blocked by `CategoryService` if the category is still in use;
+    rename cascades to every affected product automatically. Closing the
+    dialog refreshes the Inventory screen's dropdowns and product table.
+  - **POS screen kept in sync**: `POSController`'s own category filter
+    dropdown was hard-coded to `"All", "Drink", "Food", "Dairy", "Other"`
+    - once categories became editable that list would have silently gone
+    stale, so it now loads from `CategoryService` the same way, and
+    re-loads its items (without re-attaching its selection listener)
+    every time the cashier clicks "Refresh," so a category added on the
+    Inventory screen shows up here without needing to restart the app.
+  - **Verified with a real compiler and a real JavaFX runtime**: the
+    project was compiled directly against JavaFX (`javac` + the OpenJFX
+    jars, since this environment does not have network access to Maven
+    Central for `mvn compile`) with zero errors, every `fx:id` and
+    `onAction` in `inventory.fxml` was checked against
+    `InventoryController`, and `CategoryService`'s rules (add, reject
+    duplicate, block delete-in-use, rename cascades to products, reload
+    from disk) were exercised end-to-end against real
+    `data/products.txt` / `data/categories.txt` files in a scratch
+    folder.
+  - No existing feature, file format, or class was removed. `Product`,
+    `Transaction`, `ReportsController`, and all previously-saved data
+    files keep working unchanged.
 
 - **Part 9 - Selected-row contrast, POS category filter, Admin account
   creation, Admin transaction deletion:**

@@ -3,13 +3,18 @@ package com.inventory.controller;
 import com.inventory.Main;
 import com.inventory.exception.DuplicateProductException;
 import com.inventory.exception.InsufficientStockException;
+import com.inventory.exception.InvalidCategoryException;
 import com.inventory.exception.InvalidProductException;
+import com.inventory.exception.DuplicateCategoryException;
 import com.inventory.exception.ProductNotFoundException;
 import com.inventory.model.Category;
 import com.inventory.model.Product;
+import com.inventory.repository.CategoryFileRepository;
 import com.inventory.repository.ProductFileRepository;
+import com.inventory.service.CategoryService;
 import com.inventory.service.InventoryService;
 import com.inventory.service.ProductService;
+import com.inventory.util.CategoryManagerDialog;
 import com.inventory.util.Session;
 
 import javafx.beans.property.SimpleIntegerProperty;
@@ -25,8 +30,8 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleButton;
-import javafx.util.StringConverter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,6 +57,8 @@ public class InventoryController {
     private ComboBox<String> categoryFilterComboBox;
     @FXML
     private ToggleButton lowStockToggleButton;
+    @FXML
+    private Button manageCategoriesButton;
 
     // ----- Table -----
     @FXML
@@ -77,7 +84,7 @@ public class InventoryController {
     @FXML
     private TextField nameField;
     @FXML
-    private ComboBox<Category> categoryFormComboBox;
+    private ComboBox<String> categoryFormComboBox;
     @FXML
     private TextField priceField;
     @FXML
@@ -105,11 +112,18 @@ public class InventoryController {
     @FXML
     private Label statusMessageLabel;
 
-    // The Controller talks only to these two Services - never straight to
-    // the Repository or straight to a file.
+    // The Controller talks only to these Services - never straight to a
+    // Repository or straight to a file.
     private final ProductFileRepository productFileRepository = new ProductFileRepository();
+    private final CategoryFileRepository categoryFileRepository = new CategoryFileRepository();
     private final ProductService productService = new ProductService(productFileRepository);
     private final InventoryService inventoryService = new InventoryService(productFileRepository);
+    private final CategoryService categoryService = new CategoryService(categoryFileRepository, productFileRepository);
+
+    // Special entry shown at the bottom of the Add/Edit form's category
+    // dropdown. Picking it (instead of a real category) opens a small
+    // prompt to type a brand new category name.
+    private static final String ADD_NEW_CATEGORY_OPTION = "+ Add New Category";
 
     // The full, unfiltered list of products loaded from the service. The
     // table only ever shows a filtered copy of this list (see applyFilters).
@@ -165,27 +179,85 @@ public class InventoryController {
     }
 
     private void setupFilterControls() {
-        // Category filter (top bar): plain display strings, including "All".
-        categoryFilterComboBox.setItems(FXCollections.observableArrayList("All", "Drink", "Food", "Dairy", "Other"));
+        // Category filter (top bar): "All" plus every category that exists
+        // right now. Loaded from CategoryService (not hard-coded), so a
+        // brand new category the admin creates shows up here too.
+        refreshCategoryFilterItems();
         categoryFilterComboBox.setValue("All");
         categoryFilterComboBox.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
 
         // Live search as the admin types.
         searchField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
 
-        // Category dropdown used inside the Add/Edit form: shows real Category enum values.
-        categoryFormComboBox.setItems(FXCollections.observableArrayList(Category.values()));
-        categoryFormComboBox.setConverter(new StringConverter<>() {
-            @Override
-            public String toString(Category category) {
-                return category == null ? "" : category.toDisplayString();
-            }
+        // Category dropdown used inside the Add/Edit form: every real
+        // category, plus a special "+ Add New Category" entry at the end.
+        refreshCategoryFormItems();
 
-            @Override
-            public Category fromString(String text) {
-                return Category.fromString(text);
+        // Selecting "+ Add New Category" opens a small prompt instead of
+        // being treated as a real category choice.
+        categoryFormComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (ADD_NEW_CATEGORY_OPTION.equals(newVal)) {
+                promptForNewCategory(oldVal);
             }
         });
+    }
+
+    /**
+     * Refills the top-bar category filter with "All" plus every category
+     * currently saved. Called on load and again whenever the category
+     * list may have changed (a new category was added, or the "Manage
+     * Categories" dialog was used).
+     */
+    private void refreshCategoryFilterItems() {
+        String previousValue = categoryFilterComboBox.getValue();
+        List<String> items = new ArrayList<>();
+        items.add("All");
+        items.addAll(categoryService.getAllCategoryNames());
+        categoryFilterComboBox.setItems(FXCollections.observableArrayList(items));
+        categoryFilterComboBox.setValue(items.contains(previousValue) ? previousValue : "All");
+    }
+
+    /**
+     * Refills the Add/Edit form's category dropdown with every category
+     * currently saved, plus the "+ Add New Category" entry at the end.
+     */
+    private void refreshCategoryFormItems() {
+        List<String> items = new ArrayList<>(categoryService.getAllCategoryNames());
+        items.add(ADD_NEW_CATEGORY_OPTION);
+        categoryFormComboBox.setItems(FXCollections.observableArrayList(items));
+    }
+
+    /**
+     * Asks the admin to type a brand new category name (a plain
+     * TextInputDialog - simple, built straight into JavaFX). On success,
+     * the new category is saved through CategoryService, both category
+     * dropdowns are refreshed, and the new category is selected right
+     * away so the admin can keep filling in the rest of the product form.
+     * On cancel (or an invalid/duplicate name), the dropdown falls back
+     * to whatever was selected before "+ Add New Category" was chosen.
+     */
+    private void promptForNewCategory(String previousValue) {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Add New Category");
+        dialog.setHeaderText(null);
+        dialog.setContentText("New category name:");
+
+        Optional<String> result = dialog.showAndWait();
+        if (result.isEmpty()) {
+            categoryFormComboBox.setValue(previousValue);
+            return;
+        }
+
+        try {
+            Category newCategory = categoryService.addCategory(result.get());
+            refreshCategoryFormItems();
+            refreshCategoryFilterItems();
+            categoryFormComboBox.setValue(newCategory.getName());
+            showSuccess("Category added: " + newCategory.getName());
+        } catch (InvalidCategoryException | DuplicateCategoryException e) {
+            showError(e.getMessage());
+            categoryFormComboBox.setValue(previousValue);
+        }
     }
 
     private void setupSelectionListener() {
@@ -195,7 +267,7 @@ public class InventoryController {
                 idField.setText(newVal.getId());
                 idField.setDisable(true); // the ID of an existing product cannot be changed
                 nameField.setText(newVal.getName());
-                categoryFormComboBox.setValue(newVal.getCategory());
+                categoryFormComboBox.setValue(newVal.getCategory().getName());
                 priceField.setText(String.valueOf(newVal.getPrice()));
                 quantityField.setText(String.valueOf(newVal.getQuantity()));
                 minStockField.setText(String.valueOf(newVal.getMinimumStock()));
@@ -217,6 +289,7 @@ public class InventoryController {
     private void applyPermissions() {
         boolean admin = Session.isAdmin();
         addButton.setDisable(!admin);
+        manageCategoriesButton.setDisable(!admin);
         nameField.setDisable(!admin);
         categoryFormComboBox.setDisable(!admin);
         priceField.setDisable(!admin);
@@ -280,6 +353,8 @@ public class InventoryController {
     @FXML
     private void handleRefresh() {
         handleClearForm();
+        refreshCategoryFilterItems();
+        refreshCategoryFormItems();
         refreshData();
         statusMessageLabel.setText("");
     }
@@ -287,6 +362,24 @@ public class InventoryController {
     @FXML
     private void handleLowStockToggle() {
         applyFilters();
+    }
+
+    /**
+     * Opens the full Category CRUD dialog (add/rename/delete). Once the
+     * admin closes it, both category dropdowns and the product table are
+     * refreshed - a rename can change the category text shown on
+     * existing products, and a delete/add changes what should be offered
+     * as a filter or form choice.
+     */
+    @FXML
+    private void handleManageCategories() {
+        if (!Session.isAdmin()) {
+            return;
+        }
+        CategoryManagerDialog.showAndManage(categoryService);
+        refreshCategoryFilterItems();
+        refreshCategoryFormItems();
+        refreshData();
     }
 
     @FXML
@@ -402,11 +495,12 @@ public class InventoryController {
     private Product buildProductFromForm() {
         String id = idField.getText() == null ? "" : idField.getText().trim();
         String name = nameField.getText() == null ? "" : nameField.getText().trim();
-        Category category = categoryFormComboBox.getValue();
+        String categoryName = categoryFormComboBox.getValue();
 
-        if (category == null) {
-            throw new InvalidProductException("Please select a category.");
+        if (categoryName == null || categoryName.isBlank() || ADD_NEW_CATEGORY_OPTION.equals(categoryName)) {
+            throw new InvalidProductException("Please select (or add) a category.");
         }
+        Category category = Category.fromString(categoryName);
 
         double price = Double.parseDouble(priceField.getText().trim());
         int quantity = Integer.parseInt(quantityField.getText().trim());
