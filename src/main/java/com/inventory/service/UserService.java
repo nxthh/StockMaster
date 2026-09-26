@@ -3,10 +3,12 @@ package com.inventory.service;
 import com.inventory.exception.DuplicateUsernameException;
 import com.inventory.exception.InvalidUserException;
 import com.inventory.model.Cashier;
+import com.inventory.model.Role;
 import com.inventory.model.User;
 import com.inventory.repository.UserFileRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * UserService contains the BUSINESS RULES for managing user accounts:
@@ -20,10 +22,11 @@ import java.util.List;
  * UserController never touches data/users.txt itself - it only calls
  * this service and reacts to whether it succeeds or throws.
  *
- * Scope: on purpose, this only lets an Admin create a CASHIER account
- * (not another Admin account) and does not support editing or deleting
- * accounts - that matches exactly what was asked for. Nothing more was
- * added, per the project's "do not over-engineer" rule.
+ * Scope: on purpose, this only lets an Admin create OR delete a CASHIER
+ * account (never an Admin account) and does not support editing an
+ * existing account's username/password - that matches exactly what was
+ * asked for. Nothing more was added, per the project's "do not
+ * over-engineer" rule.
  */
 public class UserService {
 
@@ -70,5 +73,33 @@ public class UserService {
         Cashier cashier = new Cashier(trimmedUsername, password);
         userFileRepository.addUser(cashier);
         return cashier;
+    }
+
+    /**
+     * Deletes the Cashier account with the given username.
+     *
+     * Only Cashier accounts can be deleted this way - an Admin account is
+     * never removable through this method, so an Admin can never lock
+     * themselves (or every other Admin) out of the application by
+     * accident. This mirrors createCashierAccount(), which likewise only
+     * ever creates a Cashier, never an Admin.
+     *
+     * @throws InvalidUserException if no account with that username exists,
+     *                              or if that account is an Admin account
+     */
+    public void deleteCashierAccount(String username) {
+        if (username == null || username.isBlank()) {
+            throw new InvalidUserException("Please select an account to delete.");
+        }
+
+        Optional<User> existing = userFileRepository.findByUsername(username.trim());
+        if (existing.isEmpty()) {
+            throw new InvalidUserException("Account \"" + username + "\" was not found.");
+        }
+        if (existing.get().getRole() == Role.ADMIN) {
+            throw new InvalidUserException("Admin accounts cannot be deleted here.");
+        }
+
+        userFileRepository.deleteUser(username.trim());
     }
 }

@@ -119,6 +119,34 @@ public class UserFileRepository {
     }
 
     /**
+     * Writes the given list of users to data/users.txt, replacing
+     * whatever was there before. Follows the exact same "rewrite the
+     * whole file" pattern as ProductFileRepository.saveAll() - deleting a
+     * user is not a special case, it is just "save the list without that
+     * one account in it".
+     */
+    public void saveAll(List<User> users) {
+        try (FileWriter writer = new FileWriter(FILE_PATH)) {
+            for (User user : users) {
+                writer.write(user.toFileLine());
+                writer.write(System.lineSeparator());
+            }
+        } catch (IOException e) {
+            System.out.println("Could not save user file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Removes the account with the given username and saves the change to
+     * disk. Matched case-insensitively, the same way findByUsername() is.
+     */
+    public void deleteUser(String username) {
+        List<User> users = loadAll();
+        users.removeIf(user -> user.getUsername().equalsIgnoreCase(username));
+        saveAll(users);
+    }
+
+    /**
      * Creates the data folder and users.txt file with the two default
      * accounts (admin/admin123, cashier/cashier123) if they do not
      * already exist. This runs once, the first time the application

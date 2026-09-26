@@ -51,7 +51,11 @@
                 </columns>
             </TableView>
 
-            <Button text="Refresh" onAction="#handleRefresh"/>
+            <HBox spacing="10">
+                <Button text="Refresh" onAction="#handleRefresh"/>
+                <Button fx:id="deleteUserButton" text="Delete Selected Account"
+                        onAction="#handleDeleteUser" style="-fx-text-fill: #ffffff;"/>
+            </HBox>
         </VBox>
     </center>
 

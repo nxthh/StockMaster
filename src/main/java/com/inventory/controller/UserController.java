@@ -4,6 +4,7 @@ import com.inventory.Main;
 import com.inventory.exception.DuplicateUsernameException;
 import com.inventory.exception.InvalidUserException;
 import com.inventory.model.Cashier;
+import com.inventory.model.Role;
 import com.inventory.model.User;
 import com.inventory.repository.UserFileRepository;
 import com.inventory.service.UserService;
@@ -23,6 +24,7 @@ import javafx.scene.control.TextField;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Controller for users.fxml - the ADMIN-only "Manage Users" screen.
@@ -61,6 +63,8 @@ public class UserController {
     private PasswordField confirmPasswordField;
     @FXML
     private Button createCashierButton;
+    @FXML
+    private Button deleteUserButton;
 
     @FXML
     private Label statusMessageLabel;
@@ -70,6 +74,9 @@ public class UserController {
     // controller in this project.
     private final UserFileRepository userFileRepository = new UserFileRepository();
     private final UserService userService = new UserService(userFileRepository);
+
+    // The account currently selected in the table (null if none).
+    private User selectedUser;
 
     @FXML
     private void initialize() {
@@ -84,6 +91,7 @@ public class UserController {
         }
 
         setupTableColumns();
+        setupUserSelectionListener();
         roleLabel.setText("Logged in as: " + Session.getCurrentUsername() + " (" + Session.getCurrentRole() + ")");
         refreshUsers();
     }
@@ -91,6 +99,21 @@ public class UserController {
     private void setupTableColumns() {
         usernameColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getUsername()));
         roleColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRole().toString()));
+    }
+
+    /**
+     * "Delete Selected Account" only makes sense once a row is actually
+     * selected, and only ever applies to a Cashier row - an Admin row is
+     * never deletable here (see UserService.deleteCashierAccount()), so
+     * the button is disabled for it instead of letting the admin click it
+     * and just see an error every time.
+     */
+    private void setupUserSelectionListener() {
+        usersTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            selectedUser = newVal;
+            deleteUserButton.setDisable(newVal == null || newVal.getRole() == Role.ADMIN);
+        });
+        deleteUserButton.setDisable(true);
     }
 
     @FXML
@@ -101,6 +124,8 @@ public class UserController {
     private void refreshUsers() {
         List<User> users = userService.getAllUsers();
         usersTable.setItems(FXCollections.observableArrayList(users));
+        selectedUser = null;
+        deleteUserButton.setDisable(true);
     }
 
     /**
@@ -119,6 +144,40 @@ public class UserController {
             refreshUsers();
         } catch (InvalidUserException | DuplicateUsernameException e) {
             showError(e.getMessage());
+        }
+    }
+
+    /**
+     * Deletes the selected Cashier account, after the admin confirms.
+     * UserService does the real rule-checking (must exist, must be a
+     * Cashier, never an Admin) - this method just asks for confirmation
+     * and reacts to success or failure, the same "confirm then call the
+     * service" pattern POSController.handleClearCart() already uses.
+     */
+    @FXML
+    private void handleDeleteUser() {
+        if (selectedUser == null) {
+            showError("Please select an account to delete.");
+            return;
+        }
+
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION,
+                "Are you sure you want to delete the Cashier account \"" + selectedUser.getUsername() + "\"? "
+                        + "This cannot be undone.",
+                ButtonType.YES, ButtonType.NO);
+        confirmAlert.setTitle("Confirm Delete Account");
+        confirmAlert.setHeaderText(null);
+
+        Optional<ButtonType> result = confirmAlert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.YES) {
+            try {
+                String deletedUsername = selectedUser.getUsername();
+                userService.deleteCashierAccount(deletedUsername);
+                showSuccess("Cashier account \"" + deletedUsername + "\" deleted successfully.");
+                refreshUsers();
+            } catch (InvalidUserException e) {
+                showError(e.getMessage());
+            }
         }
     }
 
