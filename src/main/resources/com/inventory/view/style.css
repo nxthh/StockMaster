@@ -1,52 +1,63 @@
 /*
- * style.css - "Glass" theme, light sky-blue.
+ * style.css - Clean white theme with a light-blue primary color.
  *
  * IDEA
- *   The window background is a soft sky-blue gradient with a few blurred
- *   color glows. Every surface on top of it (sidebar, title bar, tables,
- *   cards, forms) is TRANSLUCENT WHITE with a bright edge, so the glows
- *   show faintly through, which reads as frosted glass.
- *   (JavaFX CSS cannot blur what is behind a node, so this is a
- *   translucency + highlight imitation of glass.)
+ *   White surfaces, thin light-gray-blue borders, one primary color
+ *   (light blue) for buttons, selections and highlights.
+ *   EVERY corner is square: no rounded corners anywhere.
  *
- *   "Dynamic" feel: buttons, cards and sidebar items lift / slide slightly
- *   and glow on hover.
+ * HOW SQUARE CORNERS ARE DONE
+ *   The very first rule below uses the "*" selector (= every node) to set
+ *   -fx-background-radius and -fx-border-radius to 0. That also covers the
+ *   parts JavaFX builds by itself (combo-box arrows, date-picker popup,
+ *   scrollbar thumbs, tooltips, chart legend dots, line-chart symbols...).
+ *   Because of that, the rules below do not need to repeat "radius: 0".
  *
  * SECTIONS
- *   1. Palette   2. Typography   3. Buttons   4. Inputs
- *   5. Tables / tabs / scrollbars   6. Glass surfaces
- *   7. App shell (title bar + sidebar)   8. Login
- *
- * NOTE: rgba(...) cannot use the named colors, so the glass fills are
- * written as literals. Named colors (-accent etc.) are used everywhere else.
+ *   1. Square corners + palette   2. Typography   3. Buttons   4. Inputs
+ *   5. Tables / tabs / scrollbars 6. Surfaces + dashboard cards
+ *   7. Charts                     8. App shell (title bar + sidebar)
+ *   9. Login
  */
 
-/* ===================== 1. Palette + window background ===================== */
+/* ===================== 1. Square corners + palette ===================== */
+
+* {
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
 
 .root {
-    -accent:       #3b82f6;   /* primary blue */
-    -accent-light: #7cb8ff;
-    -accent-dark:  #2563eb;
-    -accent-soft:  #dbeafe;
-    -sky:          #38bdf8;   /* small highlights */
-    -text:         #17325f;   /* deep blue-ink, readable on light glass */
-    -text-2:       #46618f;
-    -muted:        #7088b0;
-    -line:         #cfe0f7;
+    -accent:       #4aa8f0;   /* PRIMARY: light blue */
+    -accent-hover: #69b9f4;   /* lighter, used on hover */
+    -accent-dark:  #2b86cf;   /* darker, used for pressed + text on white */
+    -accent-soft:  #e8f4fd;   /* very pale blue: hover rows, tinted headers */
+    -accent-mid:   #d3eafb;   /* pale blue: selected rows */
+    -text:         #1f2d3d;   /* near-black, readable on white */
+    -text-2:       #4a5b6c;
+    -muted:        #7a8b9b;
+    -line:         #d9e6f2;   /* thin borders */
     -danger:       #dc4c3e;
     -danger-dark:  #b93a2e;
     -success:      #2f9e6b;
     -success-dark: #24805a;
 
+    -chart-1: #4aa8f0;   /* blue */
+    -chart-2: #f5a14a;   /* orange */
+    -chart-3: #4cc38a;   /* green */
+    -chart-4: #ef6f6c;   /* coral red */
+    -chart-5: #9b7fe6;   /* purple */
+    -chart-6: #2bc0c0;   /* teal */
+    -chart-7: #f2cd4f;   /* yellow */
+    -chart-8: #e66aa8;   /* pink */
+
+    /* Also recolors JavaFX's built-in selection colors (date picker etc.) */
+    -fx-accent: #4aa8f0;
+
     -fx-font-family: "Segoe UI", "Helvetica Neue", "Arial", sans-serif;
     -fx-font-size: 13px;
 
-    /* soft glows (top-left, bottom-right, top-right) on a pale sky gradient */
-    -fx-background-color:
-        radial-gradient(center 12% 8%,  radius 45%, rgba(96, 165, 250, 0.45), rgba(96, 165, 250, 0)),
-        radial-gradient(center 90% 92%, radius 50%, rgba(56, 189, 248, 0.40), rgba(56, 189, 248, 0)),
-        radial-gradient(center 92% 10%, radius 35%, rgba(167, 139, 250, 0.22), rgba(167, 139, 250, 0)),
-        linear-gradient(to bottom right, #e6f1ff, #f4f9ff 55%, #dcedff);
+    -fx-background-color: white;
 
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
@@ -59,13 +70,13 @@
 .page-title {
     -fx-font-size: 21px;
     -fx-font-weight: bold;
-    -fx-text-fill: #1e3a8a;
+    -fx-text-fill: -text;
 }
 
 .section-title {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: #1e3a8a;
+    -fx-text-fill: -text;
 }
 
 .hint           { -fx-font-size: 12px; -fx-text-fill: -muted; }
@@ -84,195 +95,126 @@
 
 /* ===================== 3. Buttons ===================== */
 
-/* Primary: glossy blue "glass bead" - a white sheen over a blue gradient.
-   Two backgrounds => radius/insets are given twice. */
+/* Primary: flat light blue, white bold text */
 .button {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%),
-        linear-gradient(to bottom, #6cb2ff, #3b82f6);
-    -fx-background-radius: 10, 10;
-    -fx-background-insets: 0, 0;
-    -fx-border-color: rgba(255, 255, 255, 0.75);
-    -fx-border-radius: 10;
+    -fx-background-color: -accent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
     -fx-text-fill: white;
     -fx-font-weight: bold;
     -fx-padding: 8 18 8 18;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.40), 12, 0, 0, 4);
 }
+.button:hover   { -fx-background-color: -accent-hover; }
+.button:pressed { -fx-background-color: -accent-dark; }
 
-.button:hover {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 55%),
-        linear-gradient(to bottom, #86c0ff, #4a90f7);
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.65), 18, 0, 0, 6);
-    -fx-translate-y: -1.5;
-}
-
-.button:pressed {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0) 55%),
-        linear-gradient(to bottom, #3b82f6, #2563eb);
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.35), 6, 0, 0, 1);
-    -fx-translate-y: 0.5;
-}
-
-/* Secondary: clear frosted glass with blue text */
+/* Secondary: white with a light-blue outline */
 .button.secondary {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.45));
-    -fx-background-radius: 10;
-    -fx-background-insets: 0;
-    -fx-border-color: rgba(147, 190, 245, 0.9);
-    -fx-text-fill: #1d4ed8;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.14), 8, 0, 0, 2);
-}
-.button.secondary:hover {
-    -fx-background-color: linear-gradient(to bottom, #ffffff, rgba(232, 242, 255, 0.9));
+    -fx-background-color: white;
     -fx-border-color: -accent;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.35), 14, 0, 0, 4);
+    -fx-text-fill: -accent-dark;
 }
-.button.secondary:pressed {
-    -fx-background-color: rgba(219, 234, 254, 0.95);
-    -fx-effect: null;
-}
+.button.secondary:hover   { -fx-background-color: -accent-soft; }
+.button.secondary:pressed { -fx-background-color: -accent-mid; }
 
 /* Danger */
-.button.danger {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
-        linear-gradient(to bottom, #f0806f, #dc4c3e);
-    -fx-effect: dropshadow(gaussian, rgba(220, 76, 62, 0.40), 12, 0, 0, 4);
-}
-.button.danger:hover {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 55%),
-        linear-gradient(to bottom, #f58f80, #e5574a);
-    -fx-effect: dropshadow(gaussian, rgba(220, 76, 62, 0.65), 18, 0, 0, 6);
-}
+.button.danger         { -fx-background-color: -danger; }
+.button.danger:hover   { -fx-background-color: #e5665a; }
+.button.danger:pressed { -fx-background-color: -danger-dark; }
 
 /* Success (Checkout) */
-.button.success {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
-        linear-gradient(to bottom, #55c793, #2f9e6b);
-    -fx-effect: dropshadow(gaussian, rgba(47, 158, 107, 0.40), 12, 0, 0, 4);
-}
-.button.success:hover {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 55%),
-        linear-gradient(to bottom, #66d6a3, #38ad78);
-    -fx-effect: dropshadow(gaussian, rgba(47, 158, 107, 0.65), 18, 0, 0, 6);
-}
+.button.success         { -fx-background-color: -success; }
+.button.success:hover   { -fx-background-color: #44b07d; }
+.button.success:pressed { -fx-background-color: -success-dark; }
 
 .button.large {
     -fx-font-size: 15px;
     -fx-padding: 12 16 12 16;
 }
 
-/* Disabled: flat frosted grey-blue. Must come after the variants. */
+/* Disabled: flat grey. Must come after the variants. */
 .button:disabled,
 .button.secondary:disabled,
 .button.danger:disabled,
 .button.success:disabled {
-    -fx-background-color: rgba(200, 214, 236, 0.7);
-    -fx-border-color: rgba(255, 255, 255, 0.6);
-    -fx-text-fill: #8ea2c4;
-    -fx-effect: null;
-    -fx-translate-y: 0;
+    -fx-background-color: #eef2f6;
+    -fx-border-color: #e1e8ef;
+    -fx-text-fill: #a3b1bf;
     -fx-cursor: default;
     -fx-opacity: 1;
 }
 
 /* Toggle buttons (Low Stock filter) */
 .toggle-button {
-    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.45));
-    -fx-background-radius: 10;
+    -fx-background-color: white;
     -fx-background-insets: 0;
-    -fx-border-color: rgba(147, 190, 245, 0.9);
-    -fx-border-radius: 10;
-    -fx-text-fill: #1d4ed8;
+    -fx-border-color: -accent;
+    -fx-text-fill: -accent-dark;
     -fx-font-weight: bold;
     -fx-padding: 8 18 8 18;
     -fx-cursor: hand;
 }
-.toggle-button:hover { -fx-border-color: -accent; }
+.toggle-button:hover    { -fx-background-color: -accent-soft; }
 .toggle-button:selected {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
-        linear-gradient(to bottom, #6cb2ff, #3b82f6);
-    -fx-background-radius: 10, 10;
-    -fx-background-insets: 0, 0;
-    -fx-border-color: rgba(255, 255, 255, 0.75);
+    -fx-background-color: -accent;
     -fx-text-fill: white;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.40), 12, 0, 0, 4);
 }
 
 /* ===================== 4. Inputs ===================== */
 
 .text-field, .password-field {
-    -fx-background-color: rgba(255, 255, 255, 0.72);
+    -fx-background-color: white;
     -fx-background-insets: 0;
-    -fx-background-radius: 10;
-    -fx-border-color: rgba(147, 190, 245, 0.85);
-    -fx-border-radius: 10;
+    -fx-border-color: -line;
     -fx-padding: 8 12 8 12;
     -fx-text-fill: -text;
-    -fx-prompt-text-fill: #93a8cc;
-    -fx-highlight-fill: #bcd6ff;
+    -fx-prompt-text-fill: #9fb0c0;
+    -fx-highlight-fill: -accent-mid;
     -fx-highlight-text-fill: -text;
 }
 
 .combo-box-base, .date-picker {
-    -fx-background-color: rgba(255, 255, 255, 0.72);
+    -fx-background-color: white;
     -fx-background-insets: 0;
-    -fx-background-radius: 10;
-    -fx-border-color: rgba(147, 190, 245, 0.85);
-    -fx-border-radius: 10;
+    -fx-border-color: -line;
     -fx-padding: 2 4 2 4;
 }
 
 .text-field:focused, .password-field:focused,
 .combo-box-base:focused, .date-picker:focused {
-    -fx-background-color: rgba(255, 255, 255, 0.95);
+    -fx-background-color: white;
     -fx-border-color: -accent;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.45), 10, 0, 0, 0);
 }
 
 .text-field:disabled, .password-field:disabled {
-    -fx-background-color: rgba(226, 234, 247, 0.7);
+    -fx-background-color: #f3f6f9;
     -fx-text-fill: -muted;
 }
 
 .combo-box .list-cell { -fx-text-fill: -text; -fx-padding: 4 6 4 6; }
 
 .combo-box-popup .list-view {
-    -fx-background-color: rgba(255, 255, 255, 0.97);
+    -fx-background-color: white;
     -fx-background-insets: 0;
-    -fx-border-color: rgba(147, 190, 245, 0.9);
-    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.25), 16, 0, 0, 5);
+    -fx-border-color: -line;
+    -fx-effect: dropshadow(gaussian, rgba(31, 45, 61, 0.15), 10, 0, 0, 3);
 }
 .combo-box-popup .list-cell { -fx-padding: 8 12 8 12; -fx-text-fill: -text; }
-.combo-box-popup .list-cell:filled:hover    { -fx-background-color: #e6f0ff; -fx-text-fill: -text; }
-.combo-box-popup .list-cell:filled:selected { -fx-background-color: -accent;  -fx-text-fill: white; }
+.combo-box-popup .list-cell:filled:hover    { -fx-background-color: -accent-soft; -fx-text-fill: -text; }
+.combo-box-popup .list-cell:filled:selected { -fx-background-color: -accent;      -fx-text-fill: white; }
 
 /* ===================== 5. Tables, tabs, scrollbars ===================== */
 
-/* The table is a pane of glass; rows are see-through so it stays glassy. */
 .table-view {
-    -fx-background-color: rgba(255, 255, 255, 0.55);
+    -fx-background-color: white;
     -fx-background-insets: 0;
-    -fx-background-radius: 14;
-    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.95), rgba(160, 200, 250, 0.55));
-    -fx-border-radius: 14;
-    -fx-padding: 1;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.16), 22, 0, 0, 8);
+    -fx-border-color: -line;
+    -fx-padding: 0;
 }
 
 .table-view .column-header-background {
-    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(226, 238, 255, 0.7));
-    -fx-background-radius: 14 14 0 0;
-    -fx-border-color: transparent transparent rgba(160, 200, 250, 0.6) transparent;
+    -fx-background-color: -accent-soft;
+    -fx-border-color: transparent transparent -accent transparent;
 }
 
 .table-view .column-header, .table-view .filler {
@@ -283,22 +225,22 @@
 
 .table-view .column-header .label {
     -fx-font-weight: bold;
-    -fx-text-fill: #2c4a86;
+    -fx-text-fill: -text;
     -fx-alignment: CENTER_LEFT;
     -fx-padding: 0 0 0 4;
 }
 
 .table-row-cell {
     -fx-cell-size: 40px;
-    -fx-background-color: transparent;
-    -fx-border-color: transparent transparent rgba(160, 200, 250, 0.30) transparent;
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent #edf2f7 transparent;
 }
-.table-row-cell:odd   { -fx-background-color: rgba(255, 255, 255, 0.35); }
-.table-row-cell:hover { -fx-background-color: rgba(255, 255, 255, 0.85); }
+.table-row-cell:odd   { -fx-background-color: #f8fbfe; }
+.table-row-cell:hover { -fx-background-color: -accent-soft; }
 
 .table-row-cell:selected,
 .table-row-cell:odd:selected {
-    -fx-background-color: linear-gradient(to right, rgba(96, 165, 250, 0.35), rgba(147, 197, 253, 0.20));
+    -fx-background-color: -accent-mid;
 }
 
 .table-cell {
@@ -308,22 +250,21 @@
     -fx-border-color: transparent;
 }
 
-/* Built-in theme makes selected text white; force it back to dark blue. */
-.table-row-cell:selected .text       { -fx-fill: #1e3a8a; }
-.table-row-cell:selected .table-cell { -fx-text-fill: #1e3a8a; }
+/* Built-in theme makes selected text white; force it back to dark. */
+.table-row-cell:selected .text       { -fx-fill: -text; }
+.table-row-cell:selected .table-cell { -fx-text-fill: -text; }
 
 .table-view .placeholder .label { -fx-text-fill: -muted; -fx-font-size: 14px; }
 
-/* Scrollbars: thin frosted pills */
+/* Scrollbars: thin flat bars */
 .scroll-bar:vertical   { -fx-pref-width: 10; }
 .scroll-bar:horizontal { -fx-pref-height: 10; }
 .scroll-bar { -fx-background-color: transparent; -fx-padding: 2; }
 .scroll-bar .thumb {
-    -fx-background-color: rgba(96, 150, 230, 0.45);
-    -fx-background-radius: 6;
+    -fx-background-color: #c3dcf0;
     -fx-background-insets: 0;
 }
-.scroll-bar .thumb:hover { -fx-background-color: rgba(59, 130, 246, 0.70); }
+.scroll-bar .thumb:hover { -fx-background-color: -accent; }
 .scroll-bar .track, .scroll-bar .track-background { -fx-background-color: transparent; -fx-border-color: transparent; }
 .scroll-bar .increment-button, .scroll-bar .decrement-button {
     -fx-padding: 0; -fx-pref-height: 0; -fx-pref-width: 0; -fx-background-color: transparent;
@@ -331,109 +272,165 @@
 .scroll-bar .increment-arrow, .scroll-bar .decrement-arrow { -fx-padding: 0; -fx-shape: " "; }
 
 .scroll-pane { -fx-background-color: transparent; -fx-background-insets: 0; -fx-padding: 0; }
-.scroll-pane > .viewport { -fx-background-color: transparent; }
-.scroll-pane > .corner   { -fx-background-color: transparent; }
+.scroll-pane > .viewport { -fx-background-color: white; }
+.scroll-pane > .corner   { -fx-background-color: white; }
 
-/* Tabs: the selected tab is a bright glass pill */
+/* Tabs: the selected tab gets a light-blue underline */
 .tab-pane > .tab-header-area > .headers-region > .tab {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
-    -fx-background-radius: 10 10 0 0;
     -fx-padding: 9 20 9 20;
     -fx-border-color: transparent;
 }
 .tab-pane > .tab-header-area > .tab-header-background {
     -fx-background-color: transparent;
-    -fx-border-color: transparent transparent rgba(160, 200, 250, 0.6) transparent;
+    -fx-border-color: transparent transparent -line transparent;
 }
 .tab .tab-label { -fx-text-fill: -muted; -fx-font-weight: bold; -fx-font-size: 13px; }
-.tab:hover { -fx-background-color: rgba(255, 255, 255, 0.5); }
+.tab:hover { -fx-background-color: -accent-soft; }
 .tab:hover .tab-label { -fx-text-fill: -text; }
 .tab:selected {
-    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55));
+    -fx-background-color: white;
     -fx-border-color: transparent transparent -accent transparent;
     -fx-border-width: 0 0 3 0;
 }
 .tab:selected .tab-label { -fx-text-fill: -accent-dark; }
 .tab-pane > .tab-content-area { -fx-background-color: transparent; }
 
-.separator .line { -fx-border-color: rgba(160, 200, 250, 0.6); -fx-border-width: 1 0 0 0; }
+.separator .line { -fx-border-color: -line; -fx-border-width: 1 0 0 0; }
 
 .tooltip {
-    -fx-background-color: rgba(255, 255, 255, 0.96);
+    -fx-background-color: white;
     -fx-text-fill: -text;
-    -fx-background-radius: 8;
-    -fx-border-color: rgba(147, 190, 245, 0.9);
-    -fx-border-radius: 8;
+    -fx-border-color: -line;
     -fx-font-size: 12px;
     -fx-padding: 6 10 6 10;
-    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.25), 10, 0, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(31, 45, 61, 0.15), 8, 0, 0, 2);
 }
 
-/* ===================== 6. Glass surfaces ===================== */
+/* ===================== 6. Surfaces + dashboard cards ===================== */
 
 /* Header strip on every inner screen */
 .page-header {
-    -fx-background-color: linear-gradient(to right, rgba(255, 255, 255, 0.70), rgba(226, 238, 255, 0.45));
-    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.95) transparent;
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent -line transparent;
 }
 
-/* Glass card (POS cart) */
+/* Card (POS cart) */
 .panel {
-    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.72), rgba(235, 244, 255, 0.50));
-    -fx-background-radius: 16;
-    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(160, 200, 250, 0.55));
-    -fx-border-radius: 16;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.18), 24, 0, 0, 8);
+    -fx-background-color: white;
+    -fx-border-color: -line;
+    -fx-effect: dropshadow(gaussian, rgba(74, 168, 240, 0.12), 10, 0, 0, 2);
 }
 
 /* Full-height form column (Inventory, Users) */
 .side-panel {
-    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.65), rgba(232, 242, 255, 0.45));
-    -fx-border-color: transparent transparent transparent rgba(255, 255, 255, 0.95);
+    -fx-background-color: #f7fbfe;
+    -fx-border-color: transparent transparent transparent -line;
 }
 
-/* Dashboard tiles: glass cards that lift on hover */
+/* Dashboard tiles: white with a colored top edge */
 .stat-card {
-    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.80), rgba(226, 238, 255, 0.45));
-    -fx-background-radius: 16;
-    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(147, 190, 245, 0.55));
-    -fx-border-radius: 16;
-    -fx-border-width: 1.5;
-    -fx-padding: 18 22 18 22;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.20), 22, 0, 0, 8);
+    -fx-background-color: white;
+    -fx-border-color: -accent -line -line -line;
+    -fx-border-width: 3 1 1 1;
+    -fx-padding: 16 18 16 18;
+    -fx-effect: dropshadow(gaussian, rgba(74, 168, 240, 0.12), 10, 0, 0, 2);
 }
 .stat-card:hover {
-    -fx-translate-y: -4;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.38), 30, 0, 0, 12);
+    -fx-effect: dropshadow(gaussian, rgba(74, 168, 240, 0.30), 14, 0, 0, 4);
 }
 
-.stat-card-danger {
-    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.80), rgba(254, 202, 196, 0.50));
-    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(240, 128, 111, 0.55));
-}
-.stat-card-success {
-    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.80), rgba(187, 235, 212, 0.50));
-    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(85, 199, 147, 0.55));
-}
+.stat-card-danger  { -fx-border-color: -danger  -line -line -line; }
+.stat-card-success { -fx-border-color: -success -line -line -line; }
 
 .stat-caption { -fx-font-size: 12px; -fx-text-fill: -text-2; }
-.stat-value   { -fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: -accent-dark; }
+.stat-value   { -fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: -accent-dark; }
 .stat-value-danger  { -fx-text-fill: -danger; }
 .stat-value-success { -fx-text-fill: -success; }
 
-/* ===================== 7. App shell: title bar + sidebar =====================
+/* Card that holds one dashboard chart */
+.chart-card {
+    -fx-background-color: white;
+    -fx-border-color: -line;
+    -fx-padding: 14 16 10 16;
+    -fx-effect: dropshadow(gaussian, rgba(74, 168, 240, 0.12), 10, 0, 0, 2);
+}
+
+/* ===================== 7. Charts ===================== */
+
+.chart { -fx-padding: 0; }
+
+.chart-title {
+    -fx-text-fill: -text;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.chart-content { -fx-padding: 6; }
+
+.chart-plot-background { -fx-background-color: white; }
+
+.chart-horizontal-grid-lines { -fx-stroke: #e6eef6; }
+.chart-vertical-grid-lines   { -fx-stroke: transparent; }
+.chart-alternative-row-fill  { -fx-fill: transparent; -fx-stroke: transparent; }
+
+.axis { -fx-tick-label-fill: -text-2; -fx-font-size: 11px; }
+.axis-label { -fx-text-fill: -muted; -fx-font-size: 11px; }
+.axis:top, .axis:bottom, .axis:left, .axis:right { -fx-border-color: -line; }
+.axis-tick-mark, .axis-minor-tick-mark { -fx-stroke: -line; }
+
+/* Bars: each bar gets its own color. JavaFX adds "data0", "data1"... to the
+   bars of a series in order, so the colors below follow the bar position. */
+.chart-bar.data0 { -fx-bar-fill: -chart-1; }
+.chart-bar.data1 { -fx-bar-fill: -chart-2; }
+.chart-bar.data2 { -fx-bar-fill: -chart-3; }
+.chart-bar.data3 { -fx-bar-fill: -chart-4; }
+.chart-bar.data4 { -fx-bar-fill: -chart-5; }
+.chart-bar.data5 { -fx-bar-fill: -chart-6; }
+.chart-bar.data6 { -fx-bar-fill: -chart-7; }
+.chart-bar.data7 { -fx-bar-fill: -chart-8; }
+
+/* Pie slices: same palette, separated by thin white lines */
+.chart-pie { -fx-border-color: white; -fx-border-width: 2; }
+.default-color0.chart-pie { -fx-pie-color: -chart-1; }
+.default-color1.chart-pie { -fx-pie-color: -chart-2; }
+.default-color2.chart-pie { -fx-pie-color: -chart-3; }
+.default-color3.chart-pie { -fx-pie-color: -chart-4; }
+.default-color4.chart-pie { -fx-pie-color: -chart-5; }
+.default-color5.chart-pie { -fx-pie-color: -chart-6; }
+.default-color6.chart-pie { -fx-pie-color: -chart-7; }
+.default-color7.chart-pie { -fx-pie-color: -chart-8; }
+.pie-label-line { -fx-stroke: -line; }
+.chart-pie-label { -fx-fill: -text-2; -fx-font-size: 11px; }
+
+.chart-legend {
+    -fx-background-color: transparent;
+    -fx-padding: 4;
+}
+.chart-legend-item { -fx-text-fill: -text-2; -fx-font-size: 11px; }
+.default-color0.chart-legend-item-symbol { -fx-background-color: -chart-1; }
+.default-color1.chart-legend-item-symbol { -fx-background-color: -chart-2; }
+.default-color2.chart-legend-item-symbol { -fx-background-color: -chart-3; }
+.default-color3.chart-legend-item-symbol { -fx-background-color: -chart-4; }
+.default-color4.chart-legend-item-symbol { -fx-background-color: -chart-5; }
+.default-color5.chart-legend-item-symbol { -fx-background-color: -chart-6; }
+.default-color6.chart-legend-item-symbol { -fx-background-color: -chart-7; }
+.default-color7.chart-legend-item-symbol { -fx-background-color: -chart-8; }
+
+/* ===================== 8. App shell: title bar + sidebar =====================
    Declared AFTER the generic .button rules on purpose: a sidebar Button has
    both "button" and "sidebar-button" at equal specificity, and the rule
-   written later wins. Sidebar buttons therefore reset the glossy button look. */
+   written later wins. Sidebar buttons therefore reset the filled button look. */
 
 .app-titlebar {
-    -fx-background-color: linear-gradient(to right, rgba(255, 255, 255, 0.85), rgba(200, 224, 255, 0.60));
-    -fx-border-color: transparent transparent rgba(255, 255, 255, 1) transparent;
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent -accent transparent;
+    -fx-border-width: 0 0 2 0;
 }
 
 .app-title-label {
-    -fx-text-fill: #1e3a8a;
+    -fx-text-fill: -accent-dark;
     -fx-font-size: 17px;
     -fx-font-weight: bold;
 }
@@ -444,80 +441,64 @@
 }
 
 .sidebar {
-    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.60), rgba(200, 224, 255, 0.40));
-    -fx-border-color: transparent rgba(255, 255, 255, 0.95) transparent transparent;
+    -fx-background-color: #f7fbfe;
+    -fx-border-color: transparent -line transparent transparent;
 }
 
-.sidebar .separator .line { -fx-border-color: rgba(147, 190, 245, 0.6); }
+.sidebar .separator .line { -fx-border-color: -line; }
 
 .sidebar-button {
     -fx-background-color: transparent;
-    -fx-background-radius: 10;
     -fx-background-insets: 0;
     -fx-border-color: transparent;
-    -fx-text-fill: #2c4a86;
+    -fx-text-fill: -text-2;
     -fx-font-weight: normal;
     -fx-font-size: 13.5px;
     -fx-alignment: CENTER_LEFT;
     -fx-padding: 11 16 11 16;
     -fx-effect: null;
-    -fx-translate-y: 0;
 }
 
 .sidebar-button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.75);
-    -fx-text-fill: #1d4ed8;
-    -fx-translate-x: 3;
-    -fx-translate-y: 0;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.22), 10, 0, 0, 3);
+    -fx-background-color: -accent-soft;
+    -fx-text-fill: -accent-dark;
 }
 
-.sidebar-button:pressed { -fx-background-color: rgba(219, 234, 254, 0.95); -fx-translate-y: 0; }
+.sidebar-button:pressed { -fx-background-color: -accent-mid; }
 
 .sidebar-button:disabled {
     -fx-background-color: transparent;
-    -fx-text-fill: #a3b6d6;
+    -fx-text-fill: #b3c1cf;
     -fx-effect: null;
-    -fx-translate-x: 0;
 }
 
-/* Active screen: bright glass pill with a blue marker on the left */
+/* Active screen: pale blue fill with a light-blue marker on the left */
 .sidebar-button-active,
 .sidebar-button-active:hover {
-    -fx-background-color: linear-gradient(to right, rgba(255, 255, 255, 1), rgba(219, 234, 254, 0.85));
-    -fx-text-fill: #1d4ed8;
+    -fx-background-color: -accent-mid;
+    -fx-text-fill: -accent-dark;
     -fx-font-weight: bold;
     -fx-border-color: transparent transparent transparent -accent;
     -fx-border-width: 0 0 0 4;
-    -fx-border-radius: 10;
-    -fx-translate-x: 0;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.28), 12, 0, 0, 3);
 }
 
 .sidebar-button-logout       { -fx-text-fill: #c0392b; }
 .sidebar-button-logout:hover {
-    -fx-background-color: rgba(254, 226, 222, 0.95);
-    -fx-text-fill: #b93a2e;
-    -fx-effect: dropshadow(gaussian, rgba(220, 76, 62, 0.25), 10, 0, 0, 3);
+    -fx-background-color: #fdeceb;
+    -fx-text-fill: -danger-dark;
 }
 
-/* ===================== 8. Login screen ===================== */
+/* ===================== 9. Login screen ===================== */
 
 .login-root {
-    -fx-background-color:
-        radial-gradient(center 18% 20%, radius 48%, rgba(96, 165, 250, 0.70), rgba(96, 165, 250, 0)),
-        radial-gradient(center 85% 80%, radius 52%, rgba(56, 189, 248, 0.65), rgba(56, 189, 248, 0)),
-        radial-gradient(center 80% 15%, radius 35%, rgba(167, 139, 250, 0.35), rgba(167, 139, 250, 0)),
-        linear-gradient(to bottom right, #dcecff, #f4f9ff 55%, #cfe6ff);
+    -fx-background-color: linear-gradient(to bottom, #eaf5fe, white);
 }
 
 .login-card {
-    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.78), rgba(235, 244, 255, 0.50));
-    -fx-background-radius: 22;
-    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(147, 190, 245, 0.5));
-    -fx-border-radius: 22;
-    -fx-border-width: 1.5;
-    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.30), 44, 0, 0, 16);
+    -fx-background-color: white;
+    -fx-border-color: -accent -line -line -line;
+    -fx-border-width: 4 1 1 1;
+    -fx-effect: dropshadow(gaussian, rgba(74, 168, 240, 0.22), 24, 0, 0, 6);
 }
 
 .login-brand {
