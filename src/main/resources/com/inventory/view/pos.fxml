@@ -20,14 +20,14 @@
 
     <!-- ===================== TOP: title bar + search bar ===================== -->
     <top>
-        <VBox spacing="10">
+        <VBox styleClass="page-header" spacing="10">
             <padding>
                 <Insets top="10" right="15" bottom="10" left="15"/>
             </padding>
 
             <HBox alignment="CENTER_LEFT" spacing="10">
-                <Button text="Back" onAction="#handleBack"/>
-                <Label text="Point of Sale" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+                <Button styleClass="secondary" text="Back" onAction="#handleBack"/>
+                <Label text="Point of Sale" styleClass="page-title"/>
             </HBox>
 
             <HBox alignment="CENTER_LEFT" spacing="10">
@@ -37,7 +37,7 @@
                 <Label text="Category:"/>
                 <ComboBox fx:id="categoryFilterComboBox" prefWidth="130"/>
 
-                <Button text="Refresh" onAction="#handleRefreshProducts"/>
+                <Button styleClass="secondary" text="Refresh" onAction="#handleRefreshProducts"/>
             </HBox>
         </VBox>
     </top>
@@ -51,9 +51,10 @@
 
             <!-- ===== LEFT: product selection ===== -->
             <VBox spacing="10" HBox.hgrow="ALWAYS" prefWidth="560">
-                <Label text="Products" style="-fx-font-weight: bold;"/>
+                <Label text="Products" styleClass="section-title"/>
 
                 <TableView fx:id="productTable" VBox.vgrow="ALWAYS">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="idColumn" text="ID" prefWidth="70"/>
                         <TableColumn fx:id="nameColumn" text="Product" prefWidth="180"/>
@@ -74,14 +75,15 @@
 
             <!-- ===== RIGHT: cart + checkout ===== -->
             <ScrollPane fitToWidth="true" prefWidth="440" HBox.hgrow="NEVER">
-            <VBox spacing="10" prefWidth="420">
+            <VBox styleClass="panel" spacing="10" prefWidth="420">
                 <padding>
-                    <Insets top="0" right="10" bottom="10" left="0"/>
+                    <Insets top="16" right="16" bottom="16" left="16"/>
                 </padding>
 
-                <Label text="Cart" style="-fx-font-weight: bold;"/>
+                <Label text="Cart" styleClass="section-title"/>
 
                 <TableView fx:id="cartTable" prefHeight="220">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="cartProductColumn" text="Product" prefWidth="150"/>
                         <TableColumn fx:id="cartQuantityColumn" text="Quantity" prefWidth="70"/>
@@ -97,16 +99,16 @@
                 </HBox>
 
                 <HBox spacing="8">
-                    <Button fx:id="removeItemButton" text="Remove Item" onAction="#handleRemoveItem"/>
-                    <Button fx:id="clearCartButton" text="Clear Cart" onAction="#handleClearCart"/>
+                    <Button styleClass="secondary" fx:id="removeItemButton" text="Remove Item" onAction="#handleRemoveItem"/>
+                    <Button styleClass="secondary" fx:id="clearCartButton" text="Clear Cart" onAction="#handleClearCart"/>
                 </HBox>
 
                 <Separator/>
 
-                <Label fx:id="subtotalLabel" text="Subtotal: $0.00" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <Label fx:id="subtotalLabel" text="Subtotal: $0.00" styleClass="summary-strong"/>
 
                 <!-- ===== Checkout: discount / tax / total breakdown ===== -->
-                <Label text="Checkout" style="-fx-font-weight: bold;"/>
+                <Label text="Checkout" styleClass="section-title"/>
 
                 <HBox alignment="CENTER_LEFT" spacing="8">
                     <Label text="Discount (%):"/>
@@ -115,7 +117,7 @@
 
                 <Label fx:id="discountAmountLabel" text="Discount: $0.00"/>
                 <Label fx:id="taxAmountLabel" text="Tax: $0.00"/>
-                <Label fx:id="totalLabel" text="TOTAL: $0.00" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <Label fx:id="totalLabel" text="TOTAL: $0.00" styleClass="total-label"/>
 
                 <Separator/>
 
@@ -130,14 +132,14 @@
                     <TextField fx:id="amountPaidField" prefWidth="90"/>
                 </HBox>
 
-                <Label fx:id="changeLabel" text="Change: $0.00" style="-fx-font-weight: bold;"/>
+                <Label fx:id="changeLabel" text="Change: $0.00" styleClass="section-title"/>
 
-                <Button fx:id="checkoutButton" text="CHECKOUT" onAction="#handleCheckout"
-                        style="-fx-font-weight: bold; -fx-font-size: 14px;" maxWidth="Infinity"/>
+                <Button styleClass="success, large" fx:id="checkoutButton" text="CHECKOUT" onAction="#handleCheckout"
+                         maxWidth="Infinity"/>
 
                 <Separator/>
 
-                <Label fx:id="statusMessageLabel" wrapText="true" style="-fx-text-fill: #2e7d32;"/>
+                <Label fx:id="statusMessageLabel" wrapText="true" styleClass="status-success"/>
             </VBox>
             </ScrollPane>
         </HBox>

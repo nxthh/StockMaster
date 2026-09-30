@@ -7,23 +7,36 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="CENTER" spacing="15" prefWidth="400" prefHeight="340"
+<!-- Outer VBox is still the root (same type as before); it only centers the white card. -->
+<VBox styleClass="login-root" alignment="CENTER" prefWidth="480" prefHeight="560"
       xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inventory.controller.LoginController">
 
-    <padding>
-        <Insets top="30" right="30" bottom="30" left="30"/>
-    </padding>
+    <VBox styleClass="login-card" alignment="CENTER_LEFT" spacing="8" maxWidth="360">
+        <padding>
+            <Insets top="36" right="32" bottom="32" left="32"/>
+        </padding>
 
-    <Label text="Inventory Management &amp; POS System" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-    <Label text="Login" style="-fx-font-size: 14px;"/>
+        <Label text="Inventory &amp; POS" styleClass="login-brand"/>
+        <Label text="Sign in to continue" styleClass="hint"/>
 
-    <TextField fx:id="usernameField" promptText="Username" maxWidth="250"/>
-    <PasswordField fx:id="passwordField" promptText="Password" maxWidth="250"/>
+        <Label text="Username" styleClass="field-label">
+            <VBox.margin><Insets top="18"/></VBox.margin>
+        </Label>
+        <TextField fx:id="usernameField" promptText="Enter your username" maxWidth="Infinity"/>
 
-    <Button text="Login" onAction="#handleLogin" prefWidth="120"/>
+        <Label text="Password" styleClass="field-label">
+            <VBox.margin><Insets top="6"/></VBox.margin>
+        </Label>
+        <PasswordField fx:id="passwordField" promptText="Enter your password" maxWidth="Infinity"/>
 
-    <Label fx:id="statusLabel" style="-fx-text-fill: red;"/>
+        <Button text="Sign in" onAction="#handleLogin" defaultButton="true"
+                styleClass="large" maxWidth="Infinity">
+            <VBox.margin><Insets top="16"/></VBox.margin>
+        </Button>
+
+        <Label fx:id="statusLabel" styleClass="status-error" wrapText="true"/>
+    </VBox>
 
 </VBox>

@@ -1,213 +1,527 @@
 /*
- * style.css - one simple, shared theme for every screen in the app.
+ * style.css - "Glass" theme, light sky-blue.
  *
- * WHY THIS FILE EXISTS: without it, colors/fonts/spacing would need to be
- * set with an inline style="..." attribute on every single control in
- * every .fxml file, and a color used in ten places would need to be
- * changed in ten places. Instead, the whole application's look is
- * configured ONCE here (loaded by Main.switchScene()), the same idea as
- * TaxCalculator holding the tax rate in one place instead of scattering
- * "0.10" through the code.
+ * IDEA
+ *   The window background is a soft sky-blue gradient with a few blurred
+ *   color glows. Every surface on top of it (sidebar, title bar, tables,
+ *   cards, forms) is TRANSLUCENT WHITE with a bright edge, so the glows
+ *   show faintly through, which reads as frosted glass.
+ *   (JavaFX CSS cannot blur what is behind a node, so this is a
+ *   translucency + highlight imitation of glass.)
  *
- * Kept intentionally simple: a light background, one accent color for
- * primary actions, readable table rows, and consistent form spacing.
- * No animations, gradients, or custom fonts.
+ *   "Dynamic" feel: buttons, cards and sidebar items lift / slide slightly
+ *   and glow on hover.
+ *
+ * SECTIONS
+ *   1. Palette   2. Typography   3. Buttons   4. Inputs
+ *   5. Tables / tabs / scrollbars   6. Glass surfaces
+ *   7. App shell (title bar + sidebar)   8. Login
+ *
+ * NOTE: rgba(...) cannot use the named colors, so the glass fills are
+ * written as literals. Named colors (-accent etc.) are used everywhere else.
  */
 
+/* ===================== 1. Palette + window background ===================== */
+
 .root {
-    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -accent:       #3b82f6;   /* primary blue */
+    -accent-light: #7cb8ff;
+    -accent-dark:  #2563eb;
+    -accent-soft:  #dbeafe;
+    -sky:          #38bdf8;   /* small highlights */
+    -text:         #17325f;   /* deep blue-ink, readable on light glass */
+    -text-2:       #46618f;
+    -muted:        #7088b0;
+    -line:         #cfe0f7;
+    -danger:       #dc4c3e;
+    -danger-dark:  #b93a2e;
+    -success:      #2f9e6b;
+    -success-dark: #24805a;
+
+    -fx-font-family: "Segoe UI", "Helvetica Neue", "Arial", sans-serif;
     -fx-font-size: 13px;
-    -fx-background-color: #ffffff;
+
+    /* soft glows (top-left, bottom-right, top-right) on a pale sky gradient */
+    -fx-background-color:
+        radial-gradient(center 12% 8%,  radius 45%, rgba(96, 165, 250, 0.45), rgba(96, 165, 250, 0)),
+        radial-gradient(center 90% 92%, radius 50%, rgba(56, 189, 248, 0.40), rgba(56, 189, 248, 0)),
+        radial-gradient(center 92% 10%, radius 35%, rgba(167, 139, 250, 0.22), rgba(167, 139, 250, 0)),
+        linear-gradient(to bottom right, #e6f1ff, #f4f9ff 55%, #dcedff);
+
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
 }
 
-/* ===================== Labels ===================== */
+/* ===================== 2. Typography ===================== */
 
-.label {
-    -fx-text-fill: #2b2b2b;
+.label { -fx-text-fill: -text; }
+
+.page-title {
+    -fx-font-size: 21px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1e3a8a;
 }
 
-/* ===================== Buttons ===================== */
+.section-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1e3a8a;
+}
 
+.hint           { -fx-font-size: 12px; -fx-text-fill: -muted; }
+.status-success { -fx-text-fill: -success; -fx-font-weight: bold; }
+.status-error   { -fx-text-fill: -danger;  -fx-font-weight: bold; }
+
+.summary-strong { -fx-font-size: 15px; -fx-font-weight: bold; }
+.total-label    { -fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: -accent-dark; }
+.stat-line      { -fx-font-size: 14px; -fx-text-fill: -text-2; }
+
+.field-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text-2;
+}
+
+/* ===================== 3. Buttons ===================== */
+
+/* Primary: glossy blue "glass bead" - a white sheen over a blue gradient.
+   Two backgrounds => radius/insets are given twice. */
 .button {
-    -fx-background-color: #1976d2;
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%),
+        linear-gradient(to bottom, #6cb2ff, #3b82f6);
+    -fx-background-radius: 10, 10;
+    -fx-background-insets: 0, 0;
+    -fx-border-color: rgba(255, 255, 255, 0.75);
+    -fx-border-radius: 10;
     -fx-text-fill: white;
     -fx-font-weight: bold;
-    -fx-background-radius: 4;
-    -fx-padding: 6 14 6 14;
+    -fx-padding: 8 18 8 18;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.40), 12, 0, 0, 4);
 }
 
 .button:hover {
-    -fx-background-color: #1565c0;
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 55%),
+        linear-gradient(to bottom, #86c0ff, #4a90f7);
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.65), 18, 0, 0, 6);
+    -fx-translate-y: -1.5;
 }
 
-.button:disabled {
-    -fx-background-color: #b0bec5;
-    -fx-text-fill: #eceff1;
+.button:pressed {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0) 55%),
+        linear-gradient(to bottom, #3b82f6, #2563eb);
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.35), 6, 0, 0, 1);
+    -fx-translate-y: 0.5;
+}
+
+/* Secondary: clear frosted glass with blue text */
+.button.secondary {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.45));
+    -fx-background-radius: 10;
+    -fx-background-insets: 0;
+    -fx-border-color: rgba(147, 190, 245, 0.9);
+    -fx-text-fill: #1d4ed8;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.14), 8, 0, 0, 2);
+}
+.button.secondary:hover {
+    -fx-background-color: linear-gradient(to bottom, #ffffff, rgba(232, 242, 255, 0.9));
+    -fx-border-color: -accent;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.35), 14, 0, 0, 4);
+}
+.button.secondary:pressed {
+    -fx-background-color: rgba(219, 234, 254, 0.95);
+    -fx-effect: null;
+}
+
+/* Danger */
+.button.danger {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
+        linear-gradient(to bottom, #f0806f, #dc4c3e);
+    -fx-effect: dropshadow(gaussian, rgba(220, 76, 62, 0.40), 12, 0, 0, 4);
+}
+.button.danger:hover {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 55%),
+        linear-gradient(to bottom, #f58f80, #e5574a);
+    -fx-effect: dropshadow(gaussian, rgba(220, 76, 62, 0.65), 18, 0, 0, 6);
+}
+
+/* Success (Checkout) */
+.button.success {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
+        linear-gradient(to bottom, #55c793, #2f9e6b);
+    -fx-effect: dropshadow(gaussian, rgba(47, 158, 107, 0.40), 12, 0, 0, 4);
+}
+.button.success:hover {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 55%),
+        linear-gradient(to bottom, #66d6a3, #38ad78);
+    -fx-effect: dropshadow(gaussian, rgba(47, 158, 107, 0.65), 18, 0, 0, 6);
+}
+
+.button.large {
+    -fx-font-size: 15px;
+    -fx-padding: 12 16 12 16;
+}
+
+/* Disabled: flat frosted grey-blue. Must come after the variants. */
+.button:disabled,
+.button.secondary:disabled,
+.button.danger:disabled,
+.button.success:disabled {
+    -fx-background-color: rgba(200, 214, 236, 0.7);
+    -fx-border-color: rgba(255, 255, 255, 0.6);
+    -fx-text-fill: #8ea2c4;
+    -fx-effect: null;
+    -fx-translate-y: 0;
     -fx-cursor: default;
+    -fx-opacity: 1;
 }
 
-/* Toggle buttons (e.g. the "Low Stock" filter) look like normal buttons
-   until selected, when they switch to the accent color so it is obvious
-   the filter is turned on. */
+/* Toggle buttons (Low Stock filter) */
 .toggle-button {
-    -fx-background-color: #eceff1;
-    -fx-text-fill: #2b2b2b;
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.45));
+    -fx-background-radius: 10;
+    -fx-background-insets: 0;
+    -fx-border-color: rgba(147, 190, 245, 0.9);
+    -fx-border-radius: 10;
+    -fx-text-fill: #1d4ed8;
     -fx-font-weight: bold;
-    -fx-background-radius: 4;
-    -fx-padding: 6 14 6 14;
+    -fx-padding: 8 18 8 18;
     -fx-cursor: hand;
 }
-
+.toggle-button:hover { -fx-border-color: -accent; }
 .toggle-button:selected {
-    -fx-background-color: #1976d2;
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%),
+        linear-gradient(to bottom, #6cb2ff, #3b82f6);
+    -fx-background-radius: 10, 10;
+    -fx-background-insets: 0, 0;
+    -fx-border-color: rgba(255, 255, 255, 0.75);
     -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.40), 12, 0, 0, 4);
 }
 
-/* ===================== Text fields / combo boxes / date pickers ===================== */
+/* ===================== 4. Inputs ===================== */
 
-.text-field, .password-field, .combo-box, .date-picker {
-    -fx-background-radius: 4;
-    -fx-border-radius: 4;
-    -fx-border-color: #cfd8dc;
-    -fx-padding: 4 6 4 6;
+.text-field, .password-field {
+    -fx-background-color: rgba(255, 255, 255, 0.72);
+    -fx-background-insets: 0;
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(147, 190, 245, 0.85);
+    -fx-border-radius: 10;
+    -fx-padding: 8 12 8 12;
+    -fx-text-fill: -text;
+    -fx-prompt-text-fill: #93a8cc;
+    -fx-highlight-fill: #bcd6ff;
+    -fx-highlight-text-fill: -text;
 }
 
-.text-field:focused, .password-field:focused, .combo-box:focused, .date-picker:focused {
-    -fx-border-color: #1976d2;
+.combo-box-base, .date-picker {
+    -fx-background-color: rgba(255, 255, 255, 0.72);
+    -fx-background-insets: 0;
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(147, 190, 245, 0.85);
+    -fx-border-radius: 10;
+    -fx-padding: 2 4 2 4;
 }
 
-/* ===================== Tables ===================== */
+.text-field:focused, .password-field:focused,
+.combo-box-base:focused, .date-picker:focused {
+    -fx-background-color: rgba(255, 255, 255, 0.95);
+    -fx-border-color: -accent;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.45), 10, 0, 0, 0);
+}
 
+.text-field:disabled, .password-field:disabled {
+    -fx-background-color: rgba(226, 234, 247, 0.7);
+    -fx-text-fill: -muted;
+}
+
+.combo-box .list-cell { -fx-text-fill: -text; -fx-padding: 4 6 4 6; }
+
+.combo-box-popup .list-view {
+    -fx-background-color: rgba(255, 255, 255, 0.97);
+    -fx-background-insets: 0;
+    -fx-border-color: rgba(147, 190, 245, 0.9);
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.25), 16, 0, 0, 5);
+}
+.combo-box-popup .list-cell { -fx-padding: 8 12 8 12; -fx-text-fill: -text; }
+.combo-box-popup .list-cell:filled:hover    { -fx-background-color: #e6f0ff; -fx-text-fill: -text; }
+.combo-box-popup .list-cell:filled:selected { -fx-background-color: -accent;  -fx-text-fill: white; }
+
+/* ===================== 5. Tables, tabs, scrollbars ===================== */
+
+/* The table is a pane of glass; rows are see-through so it stays glassy. */
 .table-view {
-    -fx-border-color: #e0e0e0;
-    -fx-background-color: white;
+    -fx-background-color: rgba(255, 255, 255, 0.55);
+    -fx-background-insets: 0;
+    -fx-background-radius: 14;
+    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.95), rgba(160, 200, 250, 0.55));
+    -fx-border-radius: 14;
+    -fx-padding: 1;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.16), 22, 0, 0, 8);
 }
 
 .table-view .column-header-background {
-    -fx-background-color: #f4f6f8;
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(226, 238, 255, 0.7));
+    -fx-background-radius: 14 14 0 0;
+    -fx-border-color: transparent transparent rgba(160, 200, 250, 0.6) transparent;
 }
 
 .table-view .column-header, .table-view .filler {
+    -fx-size: 40px;
     -fx-background-color: transparent;
-    -fx-border-color: transparent transparent #e0e0e0 transparent;
+    -fx-border-color: transparent;
 }
 
 .table-view .column-header .label {
     -fx-font-weight: bold;
-    -fx-text-fill: #37474f;
+    -fx-text-fill: #2c4a86;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 0 0 4;
 }
 
 .table-row-cell {
-    -fx-border-color: transparent transparent #eeeeee transparent;
+    -fx-cell-size: 40px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent rgba(160, 200, 250, 0.30) transparent;
 }
+.table-row-cell:odd   { -fx-background-color: rgba(255, 255, 255, 0.35); }
+.table-row-cell:hover { -fx-background-color: rgba(255, 255, 255, 0.85); }
 
-.table-row-cell:selected {
-    -fx-background-color: #e3f2fd;
-}
-
-.table-row-cell:odd {
-    -fx-background-color: #fafafa;
-}
-
+.table-row-cell:selected,
 .table-row-cell:odd:selected {
-    -fx-background-color: #e3f2fd;
+    -fx-background-color: linear-gradient(to right, rgba(96, 165, 250, 0.35), rgba(147, 197, 253, 0.20));
 }
 
-/* By default JavaFX's built-in theme switches a selected row's text to
-   white (meant for a dark selection color). Our selection background
-   above (#e3f2fd) is light, so white text would almost disappear into
-   it. This rule forces the text back to a dark color whenever a cell's
-   row is selected, so it stays readable against the light blue
-   highlight. */
-.table-row-cell:selected .text {
-    -fx-fill: #0d47a1;
+.table-cell {
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 12 0 12;
+    -fx-text-fill: -text;
+    -fx-border-color: transparent;
 }
 
-.table-row-cell:selected .table-cell {
-    -fx-text-fill: #0d47a1;
+/* Built-in theme makes selected text white; force it back to dark blue. */
+.table-row-cell:selected .text       { -fx-fill: #1e3a8a; }
+.table-row-cell:selected .table-cell { -fx-text-fill: #1e3a8a; }
+
+.table-view .placeholder .label { -fx-text-fill: -muted; -fx-font-size: 14px; }
+
+/* Scrollbars: thin frosted pills */
+.scroll-bar:vertical   { -fx-pref-width: 10; }
+.scroll-bar:horizontal { -fx-pref-height: 10; }
+.scroll-bar { -fx-background-color: transparent; -fx-padding: 2; }
+.scroll-bar .thumb {
+    -fx-background-color: rgba(96, 150, 230, 0.45);
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
 }
-
-/* ===================== Tabs (Reports screen) ===================== */
-
-.tab-pane .tab-header-area .tab-header-background {
-    -fx-background-color: #f4f6f8;
+.scroll-bar .thumb:hover { -fx-background-color: rgba(59, 130, 246, 0.70); }
+.scroll-bar .track, .scroll-bar .track-background { -fx-background-color: transparent; -fx-border-color: transparent; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+    -fx-padding: 0; -fx-pref-height: 0; -fx-pref-width: 0; -fx-background-color: transparent;
 }
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow { -fx-padding: 0; -fx-shape: " "; }
 
-.tab {
-    -fx-background-color: #eceff1;
+.scroll-pane { -fx-background-color: transparent; -fx-background-insets: 0; -fx-padding: 0; }
+.scroll-pane > .viewport { -fx-background-color: transparent; }
+.scroll-pane > .corner   { -fx-background-color: transparent; }
+
+/* Tabs: the selected tab is a bright glass pill */
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 10 10 0 0;
+    -fx-padding: 9 20 9 20;
+    -fx-border-color: transparent;
 }
-
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent rgba(160, 200, 250, 0.6) transparent;
+}
+.tab .tab-label { -fx-text-fill: -muted; -fx-font-weight: bold; -fx-font-size: 13px; }
+.tab:hover { -fx-background-color: rgba(255, 255, 255, 0.5); }
+.tab:hover .tab-label { -fx-text-fill: -text; }
 .tab:selected {
-    -fx-background-color: white;
-    -fx-border-color: #1976d2 transparent transparent transparent;
-    -fx-border-width: 2 0 0 0;
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55));
+    -fx-border-color: transparent transparent -accent transparent;
+    -fx-border-width: 0 0 3 0;
+}
+.tab:selected .tab-label { -fx-text-fill: -accent-dark; }
+.tab-pane > .tab-content-area { -fx-background-color: transparent; }
+
+.separator .line { -fx-border-color: rgba(160, 200, 250, 0.6); -fx-border-width: 1 0 0 0; }
+
+.tooltip {
+    -fx-background-color: rgba(255, 255, 255, 0.96);
+    -fx-text-fill: -text;
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(147, 190, 245, 0.9);
+    -fx-border-radius: 8;
+    -fx-font-size: 12px;
+    -fx-padding: 6 10 6 10;
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.25), 10, 0, 0, 3);
 }
 
-/* ===================== Separators ===================== */
+/* ===================== 6. Glass surfaces ===================== */
 
-.separator .line {
-    -fx-border-color: #e0e0e0;
+/* Header strip on every inner screen */
+.page-header {
+    -fx-background-color: linear-gradient(to right, rgba(255, 255, 255, 0.70), rgba(226, 238, 255, 0.45));
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.95) transparent;
 }
 
-/* ===================== App shell: title bar + sidebar (Dashboard) =====================
-   These rules are declared AFTER the generic .button rules above on
-   purpose: a Button on the sidebar has BOTH styleClass="button" (added
-   automatically by JavaFX) and styleClass="sidebar-button" (added in
-   dashboard.fxml). When two class selectors of the same specificity set
-   the same property, the one written LATER in the file wins - so putting
-   .sidebar-button below .button here is what makes the sidebar look
-   different from every other button in the app, without needing a whole
-   separate stylesheet. */
+/* Glass card (POS cart) */
+.panel {
+    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.72), rgba(235, 244, 255, 0.50));
+    -fx-background-radius: 16;
+    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(160, 200, 250, 0.55));
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.18), 24, 0, 0, 8);
+}
+
+/* Full-height form column (Inventory, Users) */
+.side-panel {
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.65), rgba(232, 242, 255, 0.45));
+    -fx-border-color: transparent transparent transparent rgba(255, 255, 255, 0.95);
+}
+
+/* Dashboard tiles: glass cards that lift on hover */
+.stat-card {
+    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.80), rgba(226, 238, 255, 0.45));
+    -fx-background-radius: 16;
+    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(147, 190, 245, 0.55));
+    -fx-border-radius: 16;
+    -fx-border-width: 1.5;
+    -fx-padding: 18 22 18 22;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.20), 22, 0, 0, 8);
+}
+.stat-card:hover {
+    -fx-translate-y: -4;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.38), 30, 0, 0, 12);
+}
+
+.stat-card-danger {
+    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.80), rgba(254, 202, 196, 0.50));
+    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(240, 128, 111, 0.55));
+}
+.stat-card-success {
+    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.80), rgba(187, 235, 212, 0.50));
+    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(85, 199, 147, 0.55));
+}
+
+.stat-caption { -fx-font-size: 12px; -fx-text-fill: -text-2; }
+.stat-value   { -fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: -accent-dark; }
+.stat-value-danger  { -fx-text-fill: -danger; }
+.stat-value-success { -fx-text-fill: -success; }
+
+/* ===================== 7. App shell: title bar + sidebar =====================
+   Declared AFTER the generic .button rules on purpose: a sidebar Button has
+   both "button" and "sidebar-button" at equal specificity, and the rule
+   written later wins. Sidebar buttons therefore reset the glossy button look. */
 
 .app-titlebar {
-    -fx-background-color: #0d47a1;
+    -fx-background-color: linear-gradient(to right, rgba(255, 255, 255, 0.85), rgba(200, 224, 255, 0.60));
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 1) transparent;
 }
 
 .app-title-label {
-    -fx-text-fill: white;
-    -fx-font-size: 16px;
+    -fx-text-fill: #1e3a8a;
+    -fx-font-size: 17px;
     -fx-font-weight: bold;
 }
 
 .app-user-label {
-    -fx-text-fill: #bbdefb;
+    -fx-text-fill: -text-2;
     -fx-font-size: 12px;
 }
 
 .sidebar {
-    -fx-background-color: #1565c0;
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.60), rgba(200, 224, 255, 0.40));
+    -fx-border-color: transparent rgba(255, 255, 255, 0.95) transparent transparent;
 }
+
+.sidebar .separator .line { -fx-border-color: rgba(147, 190, 245, 0.6); }
 
 .sidebar-button {
     -fx-background-color: transparent;
-    -fx-text-fill: white;
+    -fx-background-radius: 10;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-text-fill: #2c4a86;
     -fx-font-weight: normal;
+    -fx-font-size: 13.5px;
     -fx-alignment: CENTER_LEFT;
-    -fx-background-radius: 4;
-    -fx-padding: 10 14 10 14;
+    -fx-padding: 11 16 11 16;
+    -fx-effect: null;
+    -fx-translate-y: 0;
 }
 
 .sidebar-button:hover {
-    -fx-background-color: #1976d2;
+    -fx-background-color: rgba(255, 255, 255, 0.75);
+    -fx-text-fill: #1d4ed8;
+    -fx-translate-x: 3;
+    -fx-translate-y: 0;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.22), 10, 0, 0, 3);
 }
+
+.sidebar-button:pressed { -fx-background-color: rgba(219, 234, 254, 0.95); -fx-translate-y: 0; }
 
 .sidebar-button:disabled {
     -fx-background-color: transparent;
-    -fx-text-fill: #7fa8d9;
+    -fx-text-fill: #a3b6d6;
+    -fx-effect: null;
+    -fx-translate-x: 0;
 }
 
-/* Marks the "Dashboard" button as the currently active screen. */
-.sidebar-button-active {
-    -fx-background-color: #0d47a1;
+/* Active screen: bright glass pill with a blue marker on the left */
+.sidebar-button-active,
+.sidebar-button-active:hover {
+    -fx-background-color: linear-gradient(to right, rgba(255, 255, 255, 1), rgba(219, 234, 254, 0.85));
+    -fx-text-fill: #1d4ed8;
     -fx-font-weight: bold;
+    -fx-border-color: transparent transparent transparent -accent;
+    -fx-border-width: 0 0 0 4;
+    -fx-border-radius: 10;
+    -fx-translate-x: 0;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.28), 12, 0, 0, 3);
 }
 
-.sidebar-button-logout {
-    -fx-text-fill: #ffcdd2;
-}
-
+.sidebar-button-logout       { -fx-text-fill: #c0392b; }
 .sidebar-button-logout:hover {
-    -fx-background-color: #c62828;
-    -fx-text-fill: white;
+    -fx-background-color: rgba(254, 226, 222, 0.95);
+    -fx-text-fill: #b93a2e;
+    -fx-effect: dropshadow(gaussian, rgba(220, 76, 62, 0.25), 10, 0, 0, 3);
+}
+
+/* ===================== 8. Login screen ===================== */
+
+.login-root {
+    -fx-background-color:
+        radial-gradient(center 18% 20%, radius 48%, rgba(96, 165, 250, 0.70), rgba(96, 165, 250, 0)),
+        radial-gradient(center 85% 80%, radius 52%, rgba(56, 189, 248, 0.65), rgba(56, 189, 248, 0)),
+        radial-gradient(center 80% 15%, radius 35%, rgba(167, 139, 250, 0.35), rgba(167, 139, 250, 0)),
+        linear-gradient(to bottom right, #dcecff, #f4f9ff 55%, #cfe6ff);
+}
+
+.login-card {
+    -fx-background-color: linear-gradient(to bottom right, rgba(255, 255, 255, 0.78), rgba(235, 244, 255, 0.50));
+    -fx-background-radius: 22;
+    -fx-border-color: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(147, 190, 245, 0.5));
+    -fx-border-radius: 22;
+    -fx-border-width: 1.5;
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.30), 44, 0, 0, 16);
+}
+
+.login-brand {
+    -fx-font-size: 25px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -accent-dark;
 }
