@@ -6,6 +6,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -21,6 +22,7 @@ public class Main extends Application {
     public void start(Stage stage) throws IOException {
         primaryStage = stage;
         primaryStage.setTitle("Inventory Management & POS System");
+        loadAppIcons(primaryStage);
 
         primaryStage.setWidth(WINDOW_WIDTH);
         primaryStage.setHeight(WINDOW_HEIGHT);
@@ -30,6 +32,20 @@ public class Main extends Application {
 
         primaryStage.centerOnScreen();
         primaryStage.show();
+    }
+
+    /**
+     * Sets the window / taskbar icon. Several sizes are supplied so the OS can
+     * pick the sharpest one (16px title bar, 32px taskbar, 256px Alt-Tab...).
+     * Files live in src/main/resources/com/inventory/view/images/.
+     */
+    private static void loadAppIcons(Stage stage) {
+        for (int size : new int[] {16, 24, 32, 48, 64, 128, 256, 512}) {
+            java.net.URL url = Main.class.getResource("view/images/logo-" + size + ".png");
+            if (url != null) {
+                stage.getIcons().add(new Image(url.toExternalForm()));
+            }
+        }
     }
 
     public static void switchScene(String fxmlFile) throws IOException {

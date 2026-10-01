@@ -1,3 +1,4 @@
 admin,admin123,ADMIN
 cashier,cashier123,CASHIER
 nuth,nuth123,CASHIER
+theang,123,CASHIER
